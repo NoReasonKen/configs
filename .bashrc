@@ -134,11 +134,18 @@ export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LD_LIBRARY_PATH
 export LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LIBRARY_PATH
 
 export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/lab_project/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/lab_project/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/lab_project/PEAT${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/PEAT${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 
 export CMAKE_PREFIX_PATH=CSDK
 
 # added by Anaconda3 installer
 export PATH="/usr/local/anaconda3/bin:$PATH"
+
+# add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
+export INPUTRC=~/.inputrc
+
+# for fix docker tty size does not match window size
+export COLUMNS=`tput cols`
+export LINES=`tput lines`

@@ -1,3 +1,14 @@
 term screen-256color
 # Enable mouse scrolling and scroll bar history scrolling
 termcapinfo xterm* ti@:te@
+
+# make app windows disapear after it exit, like vim
+altscreen on
+
+# Set scrollback buffer
+defscrollback 8192
+
+# Customize the status line
+backtick 0 30 30 sh -c 'screen -ls | grep --color=no -o "$PPID[^[:space:]]*"'
+hardstatus alwayslastline
+hardstatus string '%{= kg}[%{+b M}%H%{-b g}][%{+b C}%`%{-b g}][%=%{= w}%?%-Lw%?%{+b r}(%{W}%n*%f%t%?(%u)%?%{r})%{-b w}%?%+Lw%?%=%{g}][%{= w}%Y/%m/%d %C:%s%a%{g}]'
