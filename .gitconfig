@@ -1,0 +1,11 @@
+[user]
+    email = ken5112840801@gmail.com
+    name = noreason
+[color]
+    ui = auto
+[alias]
+    b = "branch"
+    co = "checkout"
+    logg = "log --graph --decorate"
+    logga = "log --graph --decorate --all"
+    st = "status"
