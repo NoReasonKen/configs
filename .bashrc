@@ -136,7 +136,7 @@ export LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LIBRARY_PATH
 export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/PEAT${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/libsimdpp${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 
 export CMAKE_PREFIX_PATH=CSDK
 
