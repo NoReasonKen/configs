@@ -84,24 +84,6 @@ if [ -x /usr/bin/dircolors ]; then
     alias egrep='egrep --color=auto'
 fi
 
-# colored GCC warnings and errors
-#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
-
-# more self-defined aliases
-alias ls='ls --color=auto -CF'
-alias l='ls --color=auto -ClFh'
-alias la='ls --color=auto -ACF'
-alias ll='ls --color=auto -aClFh'
-alias g++17='g++ -std=c++17 -o'
-alias g++17g='g++ -std=c++17 -g -o'
-alias h='history 41'
-alias duh='du -h --max-depth=1'
-alias dfh='df -h'
-alias sc='screen'
-alias k9='kill -9'
-alias cl='clear;clear'
-alias time='/usr/bin/time'
-
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
@@ -126,6 +108,34 @@ if ! shopt -oq posix; then
   fi
 fi
 
+
+
+# ***************************************************************
+# ******************** user defined settings ********************
+# ***************************************************************
+
+# add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
+export INPUTRC=~/.inputrc
+
+# for fix docker tty size does not match window size
+export COLUMNS=`tput cols`
+export LINES=`tput lines`
+
+# more self-defined aliases
+alias ls='ls --color=auto -CF'
+alias l='ls --color=auto -ClFh'
+alias la='ls --color=auto -ACF'
+alias ll='ls --color=auto -aClFh'
+alias g++17='g++ -std=c++17 -o'
+alias g++17g='g++ -std=c++17 -g -o'
+alias h='history $((LINES - 1))'
+alias duh='du -h --max-depth=1'
+alias dfh='df -h'
+alias sc='screen'
+alias k9='kill -9'
+alias cl='clear;clear'
+alias time='/usr/bin/time'
+
 export NVM_DIR="/home/noreason/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
@@ -136,16 +146,9 @@ export LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LIBRARY_PATH
 export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/PEAT${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/libsimdpp${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 
 export CMAKE_PREFIX_PATH=CSDK
 
 # added by Anaconda3 installer
 export PATH="/usr/local/anaconda3/bin:$PATH"
-
-# add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
-export INPUTRC=~/.inputrc
-
-# for fix docker tty size does not match window size
-export COLUMNS=`tput cols`
-export LINES=`tput lines`
