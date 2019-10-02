@@ -94,7 +94,7 @@ alias la='ls --color=auto -ACF'
 alias ll='ls --color=auto -aClFh'
 alias g++17='g++ -std=c++17 -o'
 alias g++17g='g++ -std=c++17 -g -o'
-alias h='history 41'
+alias h='history $((`tput lines`-1))'
 alias duh='du -h --max-depth=1'
 alias dfh='df -h'
 alias sc='screen'
@@ -130,8 +130,8 @@ export NVM_DIR="/home/noreason/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LD_LIBRARY_PATH
-export LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+export LIBRARY_PATH=$HOME/lib:/usr/local/lib${LIBRARY_PATH:+:${LIBRARY_PATH}}
 
 export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
