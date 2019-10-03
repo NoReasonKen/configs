@@ -114,6 +114,9 @@ fi
 # ******************** user defined settings ********************
 # ***************************************************************
 
+# hidden commands related to history control to silent automatically shell history logging function of tmux-resurrect
+HISTCONTROL=ignoreboth
+
 # add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
 export INPUTRC=~/.inputrc
 
@@ -143,6 +146,8 @@ export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY
 export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 export LIBRARY_PATH=$HOME/lib:/usr/local/lib${LIBRARY_PATH:+:${LIBRARY_PATH}}
 
+export CC=/usr/local/bin/gcc
+export CXX=/usr/local/bin/g++
 export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
