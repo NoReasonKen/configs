@@ -143,7 +143,7 @@ export NVM_DIR="/home/noreason/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 export LIBRARY_PATH=$HOME/lib:/usr/local/lib${LIBRARY_PATH:+:${LIBRARY_PATH}}
 
 export CC=/usr/local/bin/gcc
