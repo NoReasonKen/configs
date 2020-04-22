@@ -6,6 +6,6 @@
 [alias]
     b = "branch"
     co = "checkout"
-    logg = "log --graph --decorate"
-    logga = "log --graph --decorate --all"
+    logg = "log --graph --decorate --stat"
+    logga = "log --graph --decorate --stat --all"
     st = "status"
