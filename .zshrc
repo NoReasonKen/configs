@@ -1,3 +1,4 @@
+[[ $TMUX == "" ]] && tmux new -A -s laptop
 # ***************************************************************
 # ************************ zsh settings *************************
 # ***************************************************************
@@ -141,6 +142,19 @@ h() {
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+export HISTFILE=~/.zsh_history
+
+# Max history maintained in shell
+export HISTSIZE=10000
+
+# Max history stored in history file
+export SAVEHIST=10000
+
+# Both imports new commands from the history file, and also causes your typed commands to be appended to the history file
+# This means that shells are aware of each other's history as well without having to close the current one or open a new one
+#setopt SHARE_HISTORY
+
 
 
 ## ***************************************************************
