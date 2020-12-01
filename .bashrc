@@ -175,3 +175,6 @@ export NVM_DIR="/home/noreason/.nvm"
 # env setting for cuda-9.1
 export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+# add directory of paftools.js into PATH
+export PATH=$PATH:$HOME/minimap2/misc
