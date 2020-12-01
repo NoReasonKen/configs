@@ -128,10 +128,11 @@ export COLUMNS=`tput cols`
 export LINES=`tput lines`
 
 # more self-defined aliases
-alias ls='ls --color=auto -CF'
-alias l='ls --color=auto -ClFh'
-alias la='ls --color=auto -ACF'
-alias ll='ls --color=auto -aClFh'
+alias ls='ls --color=always -CF'
+alias l='ls --color=always -ClFh'
+alias la='ls --color=always -ACF'
+alias ll='ls --color=always -aClFh'
+alias grep='ls --color=always'
 alias h='history $((LINES - 1))'
 alias duh='du -h --max-depth=1'
 alias dfh='df -h'
@@ -146,8 +147,8 @@ alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
 export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
 
 # env setting for library & dynamic library path
-export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export LIBRARY_PATH=$HOME/lib:/usr/local/lib${LIBRARY_PATH:+:${LIBRARY_PATH}}
+export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+export LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu${LIBRARY_PATH:+:${LIBRARY_PATH}}
 
 # env setting for gcc & g++ compiler
 export CC=/usr/local/bin/gcc

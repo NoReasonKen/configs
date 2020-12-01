@@ -1,4 +1,3 @@
-[[ $TMUX == "" ]] && tmux new -A -s laptop
 # ***************************************************************
 # ************************ zsh settings *************************
 # ***************************************************************
@@ -70,7 +69,7 @@ COMPLETION_WAITING_DOTS="true"
 # "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
 # or set a custom format using the strftime function format specifications,
 # see 'man strftime' for details.
-HIST_STAMPS="yyyy-mm-dd"
+#HIST_STAMPS="yyyy-mm-dd"
 
 # Would you like to use another custom folder than $ZSH/custom?
 # ZSH_CUSTOM=/path/to/new-custom-folder
@@ -156,6 +155,8 @@ export SAVEHIST=10000
 #setopt SHARE_HISTORY
 
 
+# Make ctrl-u be backward-kill-line instead of kill-whole-line
+bindkey \^u backward-kill-line
 
 ## ***************************************************************
 ## ************************ bash settings ************************
@@ -178,6 +179,7 @@ alias ls='ls --color=always -CF'
 alias l='ls --color=always -ClFh'
 alias la='ls --color=always -ACF'
 alias ll='ls --color=always -aClFh'
+alias grep='grep --color=always'
 # alias h='history -$((LINES - 1))' history for bash ver.
 alias duh='du -h --max-depth=1'
 alias dfh='df -h'
@@ -191,8 +193,8 @@ alias g++17g='g++ -std=c++17 -g -o'
 alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
 
 # env setting for library & dynamic library path
-export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export LIBRARY_PATH=$HOME/lib:/usr/local/lib${LIBRARY_PATH:+:${LIBRARY_PATH}}
+export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+export LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu${LIBRARY_PATH:+:${LIBRARY_PATH}}
 
 # env setting for gcc & g++ compiler
 export CC=/usr/local/bin/gcc
@@ -218,3 +220,6 @@ export NVM_DIR="/home/noreason/.nvm"
 # env setting for cuda-9.1
 export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+# env setting for texlive
+export PATH=/usr/local/texlive/2020/bin/x86_64-linux:$PATH

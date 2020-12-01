@@ -97,7 +97,7 @@ Bundle 'ctrlpvim/ctrlp.vim'
 "=======================================================
 "easymotion setting
 map <Leader> <Plug>(easymotion-prefix)
-"let g:EasyMotion_leader_key = 'f'
+let g:EasyMotion_leader_key = ','
 let g:EasyMotion_startofline = 0	"keep cursor column when JK motion
 let g:EasyMotion_smartcase = 1
 map <Leader>l <Plug>(easymotion-lineforward)
