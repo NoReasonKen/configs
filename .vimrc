@@ -22,6 +22,7 @@ set fileencodings=utf-8,utf-16,big5,gbk,euc-jp,cp950
 "indent
 set tabstop=4 "modify width of tab
 set shiftwidth=4 "affect width of >>,<<,== and autoindent
+set expandtab
 "set smartindent "indent once more for {  }
 "set cindent "indent rules base on c syntax
 

@@ -163,7 +163,8 @@ bindkey \^u backward-kill-line
 ## ***************************************************************
 
 # setting DISPLAY to enable GUI function, mainly used for using opencv to create window
-# export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+# however make vim hang
+#export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
