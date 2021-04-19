@@ -88,6 +88,7 @@ COMPLETION_WAITING_DOTS="true"
 plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
+git -C ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k pull
 
 # User configuration
 
