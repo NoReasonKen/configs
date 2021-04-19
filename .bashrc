@@ -108,6 +108,12 @@ if ! shopt -oq posix; then
   fi
 fi
 
+function check_before_append () {
+    if [ -z $(eval "echo \$$1" | grep "$2") ]; then
+        eval "export $1=$2:\${$1}"
+    fi
+}
+
 
 
 # ***************************************************************
@@ -169,9 +175,8 @@ export CPLUS_INCLUDE_PATH=/usr/local/include/opencv4${CPLUS_INCLUDE_PATH:+:${CPL
 # added by Anaconda3 installer
 export PATH="/usr/local/anaconda3/bin:$PATH"
 
-#env setting for CSDK
+# env setting for CSDK
 export CMAKE_PREFIX_PATH=CSDK
-
 
 # env setting for nvm
 export NVM_DIR="/home/noreason/.nvm"

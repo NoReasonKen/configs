@@ -15,6 +15,11 @@ fi
 # Path to your oh-my-zsh installation.
 export ZSH=$HOME/.oh-my-zsh
 
+# Make sure LANG is not C.utf8
+if [[ "$LANG" == "C.UTF-8" ]]; then
+    export LANG="en_US.utf8"
+fi
+
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -162,9 +167,15 @@ bindkey \^u backward-kill-line
 ## ************************ bash settings ************************
 ## ***************************************************************
 
+function check_before_append () {
+    if [ -z $(eval "echo \$$1" | grep "$2") ]; then
+        eval "export $1=$2:\${$1}"
+    fi
+}
+
 # setting DISPLAY to enable GUI function, mainly used for using opencv to create window
 # however make vim hang
-#export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+# export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
@@ -180,7 +191,7 @@ alias ls='ls --color=always -CF'
 alias l='ls --color=always -ClFh'
 alias la='ls --color=always -ACF'
 alias ll='ls --color=always -aClFh'
-alias grep='grep --color=always rnI'
+alias grep='grep --color=always'
 # alias h='history -$((LINES - 1))' history for bash ver.
 alias duh='du -h --max-depth=1'
 alias dfh='df -h'
@@ -193,26 +204,37 @@ alias g++17='g++ -std=c++17 -o'
 alias g++17g='g++ -std=c++17 -g -o'
 alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
 
-# more self-defined aliases (zsh only)
-alias fuck='thefuck'
-
 # env setting for library & dynamic library path
-export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu${LIBRARY_PATH:+:${LIBRARY_PATH}}
+# export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+check_before_append "LD_LIBRARY_PATH" "$HOME/lib"
+check_before_append "LD_LIBRARY_PATH" "/usr/local/lib"
+check_before_append "LD_LIBRARY_PATH" "/usr/local/lib64"
+check_before_append "LD_LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu"
+# export LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu${LIBRARY_PATH:+:${LIBRARY_PATH}}
+check_before_append "LIBRARY_PATH" "$HOME/lib"
+check_before_append "LIBRARY_PATH" "/usr/local/lib"
+check_before_append "LIBRARY_PATH" "/usr/local/lib64"
+check_before_append "LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu"
 
 # env setting for gcc & g++ compiler
 export CC=/usr/local/bin/gcc
 export CXX=/usr/local/bin/g++
 
 # env setting for gcc & g++ compiler include path
-export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/libsimdpp${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/usr/local/include/opencv4${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+#export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include"
+#export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Biovoltron/include"
+#export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Nucleona/include"
+#export CPLUS_INCLUDE_PATH=/home/noreason/libsimdpp${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+check_before_append "CPLUS_INCLUDE_PATH" "$HOME/libsimdpp/"
+#export CPLUS_INCLUDE_PATH=/usr/local/include/opencv4${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include/opencv4"
 
 # added by Anaconda3 installer
-export PATH="/usr/local/anaconda3/bin:$PATH"
+# export PATH="/usr/local/anaconda3/bin:$PATH"
+check_before_append "PATH" "/usr/local/anaconda3"
 
 # env setting for CSDK
 export CMAKE_PREFIX_PATH=CSDK
@@ -222,8 +244,18 @@ export NVM_DIR="/home/noreason/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # env setting for cuda-9.1
-export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
-export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+# export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
+check_before_append "PATH" "/usr/local/cuda-9.1/bin"
+# export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+check_before_append "LD_LIBRARY_PATH" "/usr/local/cuda-9.1/lib64"
 
 # env setting for texlive
-export PATH=/usr/local/texlive/2020/bin/x86_64-linux:$PATH
+# export PATH=/usr/local/texlive/2020/bin/x86_64-linux:$PATH
+check_before_append "PATH" "/usr/local/texlive/2020/bin/x86_64-linux"
+
+# add directory of paftools.js into PATH
+# export PATH=$PATH:$HOME/minimap2/misc
+check_before_append "PATH" "$HOME/minimap2/misc"
+
+# thefuck configure alias
+eval $(thefuck --alias)
