@@ -80,7 +80,7 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 ## Note that zsh-syntax-highlighting must be the last plugin sourced.
-plugins=(alias-finder autojump colored-man-pages colorize sudo zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -192,6 +192,9 @@ alias time='/usr/bin/time'
 alias g++17='g++ -std=c++17 -o'
 alias g++17g='g++ -std=c++17 -g -o'
 alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
+
+# more self-defined aliases (zsh only)
+alias fuck='thefuck'
 
 # env setting for library & dynamic library path
 export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
