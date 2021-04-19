@@ -3,6 +3,10 @@
     name = noreason
 [color]
     ui = auto
+[color "diff"]
+    meta = cyan
+[status]
+    showUntrackedFiles = no
 [alias]
     b = "branch"
     co = "checkout"
