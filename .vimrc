@@ -22,6 +22,7 @@ set fileencodings=utf-8,utf-16,big5,gbk,euc-jp,cp950
 "indent
 set tabstop=4 "modify width of tab
 set shiftwidth=4 "affect width of >>,<<,== and autoindent
+set expandtab
 "set smartindent "indent once more for {  }
 "set cindent "indent rules base on c syntax
 
@@ -97,7 +98,7 @@ Bundle 'ctrlpvim/ctrlp.vim'
 "=======================================================
 "easymotion setting
 map <Leader> <Plug>(easymotion-prefix)
-"let g:EasyMotion_leader_key = 'f'
+let g:EasyMotion_leader_key = ','
 let g:EasyMotion_startofline = 0	"keep cursor column when JK motion
 let g:EasyMotion_smartcase = 1
 map <Leader>l <Plug>(easymotion-lineforward)

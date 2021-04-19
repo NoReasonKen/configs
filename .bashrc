@@ -84,24 +84,6 @@ if [ -x /usr/bin/dircolors ]; then
     alias egrep='egrep --color=auto'
 fi
 
-# colored GCC warnings and errors
-#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
-
-# more self-defined aliases
-alias ls='ls --color=auto -CF'
-alias l='ls --color=auto -ClFh'
-alias la='ls --color=auto -ACF'
-alias ll='ls --color=auto -aClFh'
-alias g++17='g++ -std=c++17 -o'
-alias g++17g='g++ -std=c++17 -g -o'
-alias h='history 41'
-alias duh='du -h --max-depth=1'
-alias dfh='df -h'
-alias sc='screen'
-alias k9='kill -9'
-alias cl='clear;clear'
-alias time='/usr/bin/time'
-
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
@@ -126,22 +108,17 @@ if ! shopt -oq posix; then
   fi
 fi
 
-export NVM_DIR="/home/noreason/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
-export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
-export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LD_LIBRARY_PATH
-export LIBRARY_PATH=$HOME/lib:/usr/local/lib:$LIBRARY_PATH
 
-export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-export CPLUS_INCLUDE_PATH=/home/noreason/PEAT${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
 
-export CMAKE_PREFIX_PATH=CSDK
+# ***************************************************************
+# ******************** user defined settings ********************
+# ***************************************************************
 
-# added by Anaconda3 installer
-export PATH="/usr/local/anaconda3/bin:$PATH"
+# setting DISPLAY to enable GUI function, mainly used for using opencv to create window
+# export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+
+# hidden commands related to history control to silent automatically shell history logging function of tmux-resurrect
+HISTCONTROL=ignoreboth
 
 # add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
 export INPUTRC=~/.inputrc
@@ -149,3 +126,55 @@ export INPUTRC=~/.inputrc
 # for fix docker tty size does not match window size
 export COLUMNS=`tput cols`
 export LINES=`tput lines`
+
+# more self-defined aliases
+alias ls='ls --color=always -CF'
+alias l='ls --color=always -ClFh'
+alias la='ls --color=always -ACF'
+alias ll='ls --color=always -aClFh'
+alias grep='grep --color=always'
+alias h='history $((LINES - 1))'
+alias duh='du -h --max-depth=1'
+alias dfh='df -h'
+alias sc='screen'
+alias k9='kill -9'
+alias cl='clear;clear'
+alias time='/usr/bin/time'
+alias g++17='g++ -std=c++17 -o'
+alias g++17g='g++ -std=c++17 -g -o'
+alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
+
+export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
+
+# env setting for library & dynamic library path
+export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+export LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu${LIBRARY_PATH:+:${LIBRARY_PATH}}
+
+# env setting for gcc & g++ compiler
+export CC=/usr/local/bin/gcc
+export CXX=/usr/local/bin/g++
+
+# env setting for gcc & g++ compiler include path
+export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/home/noreason/libsimdpp${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+export CPLUS_INCLUDE_PATH=/usr/local/include/opencv4${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
+
+# added by Anaconda3 installer
+export PATH="/usr/local/anaconda3/bin:$PATH"
+
+#env setting for CSDK
+export CMAKE_PREFIX_PATH=CSDK
+
+
+# env setting for nvm
+export NVM_DIR="/home/noreason/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+
+# env setting for cuda-9.1
+export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
+export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+# add directory of paftools.js into PATH
+export PATH=$PATH:$HOME/minimap2/misc
