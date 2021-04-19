@@ -127,6 +127,9 @@ export INPUTRC=~/.inputrc
 export COLUMNS=`tput cols`
 export LINES=`tput lines`
 
+# use 'most' to display colorful man
+export MANPAGER='most'
+
 # more self-defined aliases
 alias ls='ls --color=always -CF'
 alias l='ls --color=always -ClFh'
@@ -139,6 +142,8 @@ alias dfh='df -h'
 alias sc='screen'
 alias k9='kill -9'
 alias cl='clear;clear'
+alias less='less -r'
+alias tree='tree -C'
 alias time='/usr/bin/time'
 alias g++17='g++ -std=c++17 -o'
 alias g++17g='g++ -std=c++17 -g -o'

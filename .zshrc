@@ -180,7 +180,7 @@ alias ls='ls --color=always -CF'
 alias l='ls --color=always -ClFh'
 alias la='ls --color=always -ACF'
 alias ll='ls --color=always -aClFh'
-alias grep='grep --color=always'
+alias grep='grep --color=always rnI'
 # alias h='history -$((LINES - 1))' history for bash ver.
 alias duh='du -h --max-depth=1'
 alias dfh='df -h'
