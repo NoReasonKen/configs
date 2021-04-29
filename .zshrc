@@ -88,7 +88,7 @@ COMPLETION_WAITING_DOTS="true"
 plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
-git -C ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k pull
+git -C ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k pull &> /dev/null
 
 # User configuration
 
@@ -169,7 +169,25 @@ bindkey \^u backward-kill-line
 ## ***************************************************************
 
 function check_before_append () {
-    if [ -z $(eval "echo \$$1" | grep "$2") ]; then
+    # Export environment variable if it's not set
+    if [[ -z $(eval "echo \$$1") ]]; then
+        eval "export $1=$2"
+        return
+    fi
+
+    # Replace ' ' to '_', and split paths by ':'
+    env_without_space=($(eval "echo \$$1" | tr " " "_" | tr ":" "\n"))
+    # Replace ' ' to '_', thus makes it easier to compare to env_without_space
+    param_without_space=$(echo $2 | tr " " "_")
+    # Set flag if there is elements in env_without_space matches param_without_space
+    for i in ${env_without_space[@]}; do
+        if [[ ${i} == ${param_without_space} ]]; then
+            is_contained="true"
+        fi
+    done
+
+    # Export environment variable if the flag is not set
+    if [[ -z ${is_contained} ]]; then
         eval "export $1=$2:\${$1}"
     fi
 }
