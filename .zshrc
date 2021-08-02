@@ -80,7 +80,9 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 ## Note that zsh-syntax-highlighting must be the last plugin sourced.
-plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
+
+autoload -U compinit && compinit
 
 
 # ***************************************************************
@@ -217,10 +219,10 @@ export LINES=`tput lines`
 
 # more self-defined aliases
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-alias ls='ls --color=always -CF'
-alias l='ls --color=always -ClFh'
-alias la='ls --color=always -ACF'
-alias ll='ls --color=always -aClFh'
+alias ls='ls -CFG'
+alias l='ls -ClFhG'
+alias la='ls -ACFG'
+alias ll='ls -aClFhG'
 alias grep='grep --color=always'
 # alias h='history -$((LINES - 1))' history for bash ver.
 alias duh='du -h --max-depth=1'
