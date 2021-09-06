@@ -53,6 +53,9 @@ set wildmode=list:longest,full
 set background=dark "set theme
 set t_Co=256 "set color number supported
 
+"fold
+set foldmethod=syntax
+
 "===========================================================
 " set color scheme
 colorscheme molokai
@@ -87,14 +90,29 @@ Bundle 'mhinz/vim-startify'
 Bundle 'jiangmiao/auto-pairs'
 Bundle 'tpope/vim-fugitive'
 Bundle 'ctrlpvim/ctrlp.vim'
+Bundle 'Vimjas/vim-python-pep8-indent'
+Bundle 'sukima/xmledit'
+Bundle 'tweekmonster/django-plus.vim'
+"-----snipmate dependency-----
+Bundle 'MarcWeber/vim-addon-mw-utils'
+Bundle 'tomtom/tlib_vim'
+Bundle 'garbas/vim-snipmate'
+"-----------------------------
+"-----snipmate dependency-----
+Bundle 'honza/vim-snippets'
+Bundle 'ervandew/supertab'
+"-----------------------------
+Bundle 'vim-syntastic/syntastic'
 
 "Bundle 'terryma/vim-multiple-cursors'
 "Bundle 'Chiel92/vim-autoformat'
 "Bundle 'tomtom/tcomment_vim'
-"Bundle 'garbas/vim-snipmate'
-"Bundle 'MarcWeber/vim-addon-mw-utils'  "vim-snimate lib
-"Bundle 'tomtom/tlib_vim'  "vim-snimate lib
-"Bundle 'honza/vim-snippets' "vim-snimate lib , support other language
+
+"=======================================================
+"snipmate setting
+let g:snipMate = {'snippet_version': 1}
+let g:UltiSnipsExpandTrigger="<c-a>"
+
 "=======================================================
 "easymotion setting
 map <Leader> <Plug>(easymotion-prefix)
@@ -151,7 +169,8 @@ map <F3> :Tagbar<CR>
 " autocmd BufReadPost *.cpp,*.c,*.h,*.hpp,*.cc,*.cxx call tagbar#autoopen() 
 "===========================================================
 " YouCompleteMe setting
-let g:ycm_global_ycm_extra_conf = '~/.vim/ycm_extra_conf.py'
+"let g:ycm_global_ycm_extra_conf = '~/.vim/ycm_extra_conf.py'
+let g:ycm_global_ycm_extra_conf = '~/.vim/vundle/YouCompleteMe/.ycm_extra_conf.py'
 let g:ycm_confirm_extra_conf = 0 
 let g:ycm_autoclose_preview_window_after_completion = 1
 let g:ycm_autoclose_preview_window_after_insertion = 1
@@ -159,6 +178,10 @@ let g:ycm_max_diagnostics_to_display = 0
 let g:syntastic_error_symbol = '✗'
 let g:syntastic_warning_symbol = '⚠'
 let g:syntastic_enable_balloons = 1
+
+let g:ycm_collect_identifiers_from_tags_files = 1
+let g:ycm_seed_identifiers_with_syntax = 1
+let g:ycm_complete_in_comments = 1
 "===========================================================
 " ctrlp setting
 let g:ctrlp_map = '<c-p>'
@@ -172,6 +195,16 @@ let g:ctrlp_max_height=15
 let g:ctrlp_match_window_reversed=0
 let g:ctrlp_mruf_max=500
 let g:ctrlp_follow_symlinks=1
+"===========================================================
+" syntastic (pylint)
+let g:syntastic_mode_map = {'mode': 'passive'}
+
+let g:syntastic_always_populate_loc_list = 0
+let g:syntastic_check_on_open = 0
+let g:syntastic_check_on_wq = 0
+let g:syntastic_auto_jump = 0
+let g:syntastic_python_checkers = ['pylint']
+map <F5> :SyntasticToggleMode<CR> :SyntasticCheck<CR>
 "===========================================================
 " numberpad mapping
 inoremap <Esc>Oq 1

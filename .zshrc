@@ -80,7 +80,7 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 ## Note that zsh-syntax-highlighting must be the last plugin sourced.
-plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
+plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo virtualenv zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
 
 autoload -U compinit && compinit
 
@@ -225,7 +225,7 @@ alias la='ls -ACFG'
 alias ll='ls -aClFhG'
 alias grep='grep --color=always'
 # alias h='history -$((LINES - 1))' history for bash ver.
-alias duh='du -h --max-depth=1'
+alias duh='du -h -d 1'
 alias dfh='df -h'
 alias sc='screen'
 alias k9='kill -9'
@@ -288,3 +288,24 @@ check_before_append "PATH" "/usr/local/texlive/2020/bin/x86_64-linux" ":"
 # add directory of paftools.js into PATH
 # export PATH=$PATH:$HOME/minimap2/misc
 check_before_append "PATH" "$HOME/minimap2/misc" ":"
+
+# init pyenv & pyenv-virtualenv
+# # (The below instructions are intended for common
+# shell setups. See the README for more guidance
+# if they don’t apply and/or don’t work for you.)
+# Add pyenv executable to PATH and
+# enable shims by adding the following
+# to ~/.profile and ~/.zprofile:
+#export PYENV_ROOT="$HOME/.pyenv"
+#export PATH="$PYENV_ROOT/bin:$PATH"
+#eval "$(pyenv init --path)"
+# Load pyenv into the shell by adding
+# the following to ~/.zshrc:
+#eval "$(pyenv init -)"
+# Make sure to restart your entire logon session
+# for changes to profile files to take effect.
+
+# load nvm & completion
+export NVM_DIR="$HOME/.nvm"
+[ -s "/usr/local/opt/nvm/nvm.sh" ] && . "/usr/local/opt/nvm/nvm.sh"  # This loads nvm
+[ -s "/usr/local/opt/nvm/etc/bash_completion.d/nvm" ] && . "/usr/local/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
