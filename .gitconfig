@@ -1,6 +1,6 @@
 [user]
-    email = ken5112840801@gmail.com
-    name = noreason
+	email = ken5112840801@gmail.com
+	name = KenH
 [color]
     ui = auto
 [color "diff"]
@@ -22,3 +22,5 @@
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
+[core]
+    editor = "code --wait"

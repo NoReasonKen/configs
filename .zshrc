@@ -309,3 +309,21 @@ check_before_append "PATH" "$HOME/minimap2/misc" ":"
 export NVM_DIR="$HOME/.nvm"
 [ -s "/usr/local/opt/nvm/nvm.sh" ] && . "/usr/local/opt/nvm/nvm.sh"  # This loads nvm
 [ -s "/usr/local/opt/nvm/etc/bash_completion.d/nvm" ] && . "/usr/local/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
+
+# env setting for fzf
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# Use ~~ as the trigger sequence instead of the default **
+export FZF_COMPLETION_TRIGGER='~~'
+# fzf's command
+export FZF_DEFAULT_COMMAND="fd --hidden --follow --exclude '.git' --exclude 'node_modules'"
+# CTRL-T's command
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND --type f"
+# ALT-C's command
+export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND --type d"
+# for more info see fzf/shell/completion.zsh
+_fzf_compgen_path() {
+    fd . "$1"
+}
+_fzf_compgen_dir() {
+    fd --type d . "$1"
+}
