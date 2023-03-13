@@ -89,8 +89,24 @@ autoload -U compinit && compinit
 # ******************* zsh user configurations *******************
 # ***************************************************************
 
+# Whitelist to disable zsh auto correction
+alias git="nocorrect git"
+alias python="nocorrect python"
+
+# Clone zsh custom plugin from zsh-users
+zsh_custom=${ZSH_CUSTOM:-~/.oh-my-zsh/custom}
+zsh_users_plugin=("zsh-autosuggestions" "zsh-completions" "zsh-syntax-highlighting")
+for plugin in ${zsh_users_plugin[@]}
+do
+    [[ -d ${zsh_custom}/plugins/${plugin} ]] || git clone https://github.com/zsh-users/${plugin} ${zsh_custom}/plugins/${plugin}
+done
+
+# Clone and pull powerlevel10k
+[[ -d ${zsh_custom}/themes/powerlevel10k ]] || git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${zsh_custom}/themes/powerlevel10k
+git -C ${zsh_custom}/themes/powerlevel10k pull &> /dev/null
+
+# Load oh-my-zsh
 source $ZSH/oh-my-zsh.sh
-git -C ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k pull &> /dev/null
 
 # export MANPATH="/usr/local/man:$MANPATH"
 
@@ -232,62 +248,62 @@ alias k9='kill -9'
 alias cl='clear;clear'
 alias tree='tree -C'
 alias time='/usr/local/opt/gnu-time/libexec/gnubin/time'
-alias g++17='g++ -std=c++17 -o'
-alias g++17g='g++ -std=c++17 -g -o'
-alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
+#alias g++17='g++ -std=c++17 -o'
+#alias g++17g='g++ -std=c++17 -g -o'
+#alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
+alias brewupgrade='brew update; brew upgrade; brew autoremove'
 
 # env setting for gcc & g++ compiler
-export CC=/usr/local/bin/gcc
-export CXX=/usr/local/bin/g++
+#export CC=/usr/local/bin/gcc
+#export CXX=/usr/local/bin/g++
 
 # env setting for library & dynamic library path
 # export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-check_before_append "LD_LIBRARY_PATH" "$HOME/lib" ":"
-check_before_append "LD_LIBRARY_PATH" "/usr/local/lib" ":"
-check_before_append "LD_LIBRARY_PATH" "/usr/local/lib64" ":"
-check_before_append "LD_LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
+#check_before_append "LD_LIBRARY_PATH" "$HOME/lib" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/local/lib" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/local/lib64" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
 # export LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu${LIBRARY_PATH:+:${LIBRARY_PATH}}
-check_before_append "LIBRARY_PATH" "$HOME/lib" ":"
-check_before_append "LIBRARY_PATH" "/usr/local/lib" ":"
-check_before_append "LIBRARY_PATH" "/usr/local/lib64" ":"
-check_before_append "LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
+#check_before_append "LIBRARY_PATH" "$HOME/lib" ":"
+#check_before_append "LIBRARY_PATH" "/usr/local/lib" ":"
+#check_before_append "LIBRARY_PATH" "/usr/local/lib64" ":"
+#check_before_append "LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
 
 # env setting for gcc & g++ compiler include path
 #export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include" ":"
-#export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Biovoltron/include" ":"
-#export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Nucleona/include" ":"
-#export CPLUS_INCLUDE_PATH=/home/noreason/libsimdpp${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "$HOME/libsimdpp/" ":"
-#export CPLUS_INCLUDE_PATH=/usr/local/include/opencv4${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include/opencv4" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Biovoltron/include" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Nucleona/include" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "$HOME/libsimdpp/" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include/opencv4" ":"
 
 # added by Anaconda3 installer
 # export PATH="/usr/local/anaconda3/bin:$PATH"
 check_before_append "PATH" "/usr/local/anaconda3" ":"
 
+# Check tpm existance
+[[ -d $HOME/.tmux/plugins/tpm ]] || git clone https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
+
 # env setting for CSDK
-export CMAKE_PREFIX_PATH=CSDK
+#export CMAKE_PREFIX_PATH=CSDK
 
 # env setting for nvm
-export NVM_DIR="/home/noreason/.nvm"
+export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # env setting for cuda-9.1
 # export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
-check_before_append "PATH" "/usr/local/cuda-9.1/bin" ":"
+#check_before_append "PATH" "/usr/local/cuda-9.1/bin" ":"
 # export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-check_before_append "LD_LIBRARY_PATH" "/usr/local/cuda-9.1/lib64" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/local/cuda-9.1/lib64" ":"
 
 # env setting for texlive
 # export PATH=/usr/local/texlive/2020/bin/x86_64-linux:$PATH
-check_before_append "PATH" "/usr/local/texlive/2020/bin/x86_64-linux" ":"
+#check_before_append "PATH" "/usr/local/texlive/2020/bin/x86_64-linux" ":"
 
 # add directory of paftools.js into PATH
 # export PATH=$PATH:$HOME/minimap2/misc
-check_before_append "PATH" "$HOME/minimap2/misc" ":"
+#check_before_append "PATH" "$HOME/minimap2/misc" ":"
 
 # init pyenv & pyenv-virtualenv
 # # (The below instructions are intended for common
@@ -327,3 +343,15 @@ _fzf_compgen_path() {
 _fzf_compgen_dir() {
     fd --type d . "$1"
 }
+
+# For x86 in M1 chip
+alias brew86="arch -x86_64 /usr/local/bin/brew"
+alias brew86upgrade='brew86 update; brew86 upgrade; brew86 autoremove'
+
+export CPPFLAGS="-I$(brew86 --prefix libffi)/include -I$(brew86 --prefix openssl)/include -I$(brew86 --prefix readline)/lib"
+export CFLAGS="-I$(brew86 --prefix libffi)/include -I$(brew86 --prefix openssl)/include -I$(brew86 --prefix readline)/include -I$(brew86 --prefix bzip2)/include -I$(xcrun --show-sdk-path)/usr/include -Wno-implicit-function-declaration"
+export LDFLAGS="-L$(brew86 --prefix libffi)/lib -L$(brew86 --prefix openssl)/lib -L$(brew86 --prefix readline)/lib -L$(brew86 --prefix zlib)/lib -L$(brew86 --prefix bzip2)/lib -L$(brew86 --prefix gettext)/lib"
+export DYLD_LIBRARY_PATH="$(brew86 --prefix mysql)/lib:$PATH"
+
+# Created by `pipx` on 2022-12-02 09:41:39
+export PATH="$PATH:/Users/noreason/.local/bin"
