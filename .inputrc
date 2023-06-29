@@ -1,2 +1,4 @@
+# If .inputrc has no function in system, use bindkey instead, e.g 'bindkey "\e[1;5C" "forward-word"'
 "\e[1;5C": forward-word
 "\e[1;5D": backward-word
+# For tcsh whose delete is broken "\e[3~": delete-char
