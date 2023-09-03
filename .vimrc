@@ -53,6 +53,9 @@ set wildmode=list:longest,full
 set background=dark "set theme
 set t_Co=256 "set color number supported
 
+"fold
+autocmd FileType json setlocal foldmethod=syntax
+
 "===========================================================
 " set color scheme
 colorscheme molokai

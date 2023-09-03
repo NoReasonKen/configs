@@ -80,15 +80,33 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 ## Note that zsh-syntax-highlighting must be the last plugin sourced.
-plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo virtualenv zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
+
+autoload -U compinit && compinit
 
 
 # ***************************************************************
 # ******************* zsh user configurations *******************
 # ***************************************************************
 
+# Whitelist to disable zsh auto correction
+alias git="nocorrect git"
+alias python="nocorrect python"
+
+# Clone zsh custom plugin from zsh-users
+zsh_custom=${ZSH_CUSTOM:-~/.oh-my-zsh/custom}
+zsh_users_plugin=("zsh-autosuggestions" "zsh-completions" "zsh-syntax-highlighting")
+for plugin in ${zsh_users_plugin[@]}
+do
+    [[ -d ${zsh_custom}/plugins/${plugin} ]] || git clone https://github.com/zsh-users/${plugin} ${zsh_custom}/plugins/${plugin}
+done
+
+# Clone and pull powerlevel10k
+[[ -d ${zsh_custom}/themes/powerlevel10k ]] || git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${zsh_custom}/themes/powerlevel10k
+git -C ${zsh_custom}/themes/powerlevel10k pull &> /dev/null
+
+# Load oh-my-zsh
 source $ZSH/oh-my-zsh.sh
-git -C ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k pull &> /dev/null
 
 # export MANPATH="/usr/local/man:$MANPATH"
 
@@ -239,50 +257,60 @@ export CC=/usr/local/bin/gcc
 export CXX=/usr/local/bin/g++
 
 # env setting for library & dynamic library path
-# export LD_LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/local/lib64:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-check_before_append "LD_LIBRARY_PATH" "$HOME/lib" ":"
-check_before_append "LD_LIBRARY_PATH" "/usr/local/lib" ":"
-check_before_append "LD_LIBRARY_PATH" "/usr/local/lib64" ":"
-check_before_append "LD_LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
-# export LIBRARY_PATH=$HOME/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu${LIBRARY_PATH:+:${LIBRARY_PATH}}
-check_before_append "LIBRARY_PATH" "$HOME/lib" ":"
-check_before_append "LIBRARY_PATH" "/usr/local/lib" ":"
-check_before_append "LIBRARY_PATH" "/usr/local/lib64" ":"
-check_before_append "LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
+#check_before_append "LD_LIBRARY_PATH" "$HOME/lib" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/local/lib" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/local/lib64" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
+#check_before_append "LIBRARY_PATH" "$HOME/lib" ":"
+#check_before_append "LIBRARY_PATH" "/usr/local/lib" ":"
+#check_before_append "LIBRARY_PATH" "/usr/local/lib64" ":"
+#check_before_append "LIBRARY_PATH" "/usr/lib/x86_64-linux-gnu" ":"
 
 # env setting for gcc & g++ compiler include path
-#export CPLUS_INCLUDE_PATH=/usr/local/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include" ":"
-#export CPLUS_INCLUDE_PATH=/home/noreason/Biovoltron/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Biovoltron/include" ":"
-#export CPLUS_INCLUDE_PATH=/home/noreason/Nucleona/include${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Nucleona/include" ":"
-#export CPLUS_INCLUDE_PATH=/home/noreason/libsimdpp${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "$HOME/libsimdpp/" ":"
-#export CPLUS_INCLUDE_PATH=/usr/local/include/opencv4${CPLUS_INCLUDE_PATH:+:${CPLUS_INCLUDE_PATH}}
-check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include/opencv4" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Biovoltron/include" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "$HOME/Nucleona/include" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "$HOME/libsimdpp/" ":"
+#check_before_append "CPLUS_INCLUDE_PATH" "/usr/local/include/opencv4" ":"
 
 # added by Anaconda3 installer
-# export PATH="/usr/local/anaconda3/bin:$PATH"
-check_before_append "PATH" "/usr/local/anaconda3" ":"
+#check_before_append "PATH" "/usr/local/anaconda3" ":"
+
+# Check tpm existance
+[[ -d $HOME/.tmux/plugins/tpm ]] || git clone https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
 
 # env setting for CSDK
-export CMAKE_PREFIX_PATH=CSDK
+#export CMAKE_PREFIX_PATH=CSDK
 
 # env setting for nvm
 export NVM_DIR="/home/noreason/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # env setting for cuda-9.1
-# export PATH=/usr/local/cuda-9.1/bin${PATH:+:${PATH}}
-check_before_append "PATH" "/usr/local/cuda-9.1/bin" ":"
-# export LD_LIBRARY_PATH=/usr/local/cuda-9.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-check_before_append "LD_LIBRARY_PATH" "/usr/local/cuda-9.1/lib64" ":"
+#check_before_append "PATH" "/usr/local/cuda-9.1/bin" ":"
+#check_before_append "LD_LIBRARY_PATH" "/usr/local/cuda-9.1/lib64" ":"
 
 # env setting for texlive
-# export PATH=/usr/local/texlive/2020/bin/x86_64-linux:$PATH
-check_before_append "PATH" "/usr/local/texlive/2020/bin/x86_64-linux" ":"
+#check_before_append "PATH" "/usr/local/texlive/2020/bin/x86_64-linux" ":"
 
 # add directory of paftools.js into PATH
-# export PATH=$PATH:$HOME/minimap2/misc
-check_before_append "PATH" "$HOME/minimap2/misc" ":"
+#check_before_append "PATH" "$HOME/minimap2/misc" ":"
+
+# env setting for fzf
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# Use ~~ as the trigger sequence instead of the default **
+export FZF_COMPLETION_TRIGGER='~~'
+# fzf's command
+export FZF_DEFAULT_COMMAND="fd --hidden --follow --exclude '.git' --exclude 'node_modules'"
+# CTRL-T's command
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND --type f"
+# ALT-C's command
+export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND --type d"
+# for more info see fzf/shell/completion.zsh
+_fzf_compgen_path() {
+    fd . "$1"
+}
+_fzf_compgen_dir() {
+    fd --type d . "$1"
+}
+
