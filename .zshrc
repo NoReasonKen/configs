@@ -2,10 +2,10 @@
 # ************************ zsh settings *************************
 # ***************************************************************
 
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Enable Powerlevel10k instant prompt. Should stay close to the top of $HOME/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+if [[ -r "${XDG_CACHE_HOME:-$hOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
@@ -80,7 +80,7 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 ## Note that zsh-syntax-highlighting must be the last plugin sourced.
-plugins=(alias-finder autojump colored-man-pages colorize thefuck sudo virtualenv zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
+plugins=(alias-finder autojump colored-man-pages colorize fzf-tab thefuck sudo virtualenv zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
 
 autoload -U compinit && compinit
 
@@ -94,7 +94,7 @@ alias git="nocorrect git"
 alias python="nocorrect python"
 
 # Clone zsh custom plugin from zsh-users
-zsh_custom=${ZSH_CUSTOM:-~/.oh-my-zsh/custom}
+zsh_custom=${ZSH_CUSTOM:$HOME/.oh-my-zsh/custom}
 zsh_users_plugin=("zsh-autosuggestions" "zsh-completions" "zsh-syntax-highlighting")
 for plugin in ${zsh_users_plugin[@]}
 do
@@ -129,13 +129,13 @@ source $ZSH/oh-my-zsh.sh
 # For a full list of active aliases, run `alias`.
 #
 # Example aliases
-# alias zshconfig="mate ~/.zshrc"
-# alias ohmyzsh="mate ~/.oh-my-zsh"
+# alias zshconfig="mate $HOME/.zshrc"
+# alias ohmyzsh="mate $HOME/.oh-my-zsh"
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# To customize prompt, run `p10k configure` or edit $HOME/.p10k.zsh.
+[[ ! -f $HOME/.p10k.zsh ]] || source $HOME/.p10k.zsh
 
-export HISTFILE=~/.zsh_history
+export HISTFILE=$HOME/.zsh_history
 
 # Max history maintained in shell
 export HISTSIZE=10000
@@ -155,8 +155,15 @@ fi
 # Make ctrl-u be backward-kill-line (just like bash) instead of kill-whole-line
 bindkey \^u backward-kill-line
 
+# Make wildcard(*) consider hidden files
+setopt GLOB_DOTS
+
 # Make the prompt texts from zsh-autosuggestions darker
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#585858"
+
+# Check fzf-tab existance
+[[ -d ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab ]] || git clone https://github.com/Aloxaf/fzf-tab ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab
+zstyle ":fzf-tab:*" fzf-flags --height=40% --layout=reverse --border --color "--color=dark,fg:-1,bg:-1,hl:#c678dd,fg+:#ffffff,bg+:#4b5263,hl+:#d858fe,info:#98c379,prompt:#61afef,pointer:#be5046,marker:#e5c07b,spinner:#61afef,header:#61afef"
 
 # thefuck configure alias
 eval $(thefuck --alias)
@@ -227,11 +234,14 @@ function check_before_append () {
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # add feature that can move cursor cross a word by pressing Ctrl+[<-|->]
-export INPUTRC=~/.inputrc
+export INPUTRC=$HOME/.inputrc
 
 # fix the problem of docker which cannot make size of tty match window size
 export COLUMNS=`tput cols`
 export LINES=`tput lines`
+
+# fix the run-help for zsh built-in command target to bash's man page
+export HELPDIR=/depot/zsh/zsh-5.9/share/zsh/5.9/help
 
 # more self-defined aliases
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
@@ -243,14 +253,15 @@ alias grep='grep --color=always'
 # alias h='history -$((LINES - 1))' history for bash ver.
 alias duh='du -h --max-depth=1'
 alias dfh='df -h'
-alias sc='screen'
 alias k9='kill -9'
 alias cl='clear;clear'
 alias tree='tree -C'
 alias time='/usr/bin/time'
+alias vimdiff='vim -d'
 alias g++17='g++ -std=c++17 -o'
 alias g++17g='g++ -std=c++17 -g -o'
 alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
+alias locate='locate -d $(echo $HOME)/.locate.db'
 
 # env setting for gcc & g++ compiler
 export CC=/usr/local/bin/gcc
@@ -283,8 +294,8 @@ export CXX=/usr/local/bin/g++
 #export CMAKE_PREFIX_PATH=CSDK
 
 # env setting for nvm
-export NVM_DIR="/home/noreason/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+#export NVM_DIR="/home/noreason/.nvm"
+#[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # env setting for cuda-9.1
 #check_before_append "PATH" "/usr/local/cuda-9.1/bin" ":"
@@ -297,7 +308,7 @@ export NVM_DIR="/home/noreason/.nvm"
 #check_before_append "PATH" "$HOME/minimap2/misc" ":"
 
 # env setting for fzf
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+[ -f $HOME/.fzf.zsh ] && source $HOME/.fzf.zsh
 # Use ~~ as the trigger sequence instead of the default **
 export FZF_COMPLETION_TRIGGER='~~'
 # fzf's command
@@ -314,3 +325,6 @@ _fzf_compgen_dir() {
     fd --type d . "$1"
 }
 
+# Install zlua
+[[ -d $ZSH_CUSTOM/plugins/zlua ]] || git clone https://github.com/skywind3000/z.lua $ZSH_CUSTOM/plugins/zlua
+eval "$(lua $HOME/.oh-my-zsh/custom/plugins/zlua/z.lua --init zsh enhanced)"
