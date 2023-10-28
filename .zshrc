@@ -5,7 +5,7 @@
 # Enable Powerlevel10k instant prompt. Should stay close to the top of $HOME/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$hOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
@@ -80,7 +80,7 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 ## Note that zsh-syntax-highlighting must be the last plugin sourced.
-plugins=(alias-finder autojump colored-man-pages colorize fzf-tab thefuck sudo virtualenv zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
+plugins=(alias-finder autojump colored-man-pages colorize fd fzf-tab thefuck sudo virtualenv zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
 
 autoload -U compinit && compinit
 
@@ -94,7 +94,7 @@ alias git="nocorrect git"
 alias python="nocorrect python"
 
 # Clone zsh custom plugin from zsh-users
-zsh_custom=${ZSH_CUSTOM:$HOME/.oh-my-zsh/custom}
+zsh_custom=${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}
 zsh_users_plugin=("zsh-autosuggestions" "zsh-completions" "zsh-syntax-highlighting")
 for plugin in ${zsh_users_plugin[@]}
 do
@@ -160,6 +160,9 @@ setopt GLOB_DOTS
 
 # Make the prompt texts from zsh-autosuggestions darker
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#585858"
+
+# Check fzf existance
+[[ -d ${HOME}/.fzf ]] || (git clone --depth 1 https://github.com/junegunn/fzf.git ${HOME}/.fzf && ${HOME}/.fzf/install)
 
 # Check fzf-tab existance
 [[ -d ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab ]] || git clone https://github.com/Aloxaf/fzf-tab ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab
@@ -328,3 +331,4 @@ _fzf_compgen_dir() {
 # Install zlua
 [[ -d $ZSH_CUSTOM/plugins/zlua ]] || git clone https://github.com/skywind3000/z.lua $ZSH_CUSTOM/plugins/zlua
 eval "$(lua $HOME/.oh-my-zsh/custom/plugins/zlua/z.lua --init zsh enhanced)"
+
