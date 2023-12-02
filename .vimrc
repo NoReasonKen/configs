@@ -45,22 +45,22 @@ set showmode "show mode(ex: insert, normal, visual, command...)
 set showcmd "show current command
 set wildmenu "show menu while activating command complete
 set wildmode=list:longest,full
-	"set sildmenu mode, two options for first and second tab click: 
-	"	1. complete to lingest possible and list candidates
-	"	2. select full command
+"set sildmenu mode, two options for first and second tab click:
+"	1. complete to lingest possible and list candidates
+"	2. select full command
 
 "theme and color
 set background=dark "set theme
 set t_Co=256 "set color number supported
 
-"fold
-autocmd FileType json setlocal foldmethod=syntax
+"lists unprintable if 'set list'
+set listchars=tab:⇤–⇥,space:·,trail:·,precedes:⇠,extends:⇢,nbsp:×
 
 "===========================================================
 " set color scheme
 colorscheme molokai
 "===========================================================
-" Vundle Setting 
+" Vundle Setting
 let iCanHazVundle=1
 let vundle_readme=expand('~/.vim/vundle/README.md')
 if !filereadable(vundle_readme)
@@ -85,11 +85,13 @@ Bundle 'vim-airline/vim-airline-themes'
 Bundle 'airblade/vim-gitgutter'
 Bundle 'scrooloose/nerdtree'
 Bundle 'majutsushi/tagbar'
-Bundle 'Valloric/YouCompleteMe'
+"Bundle 'Valloric/YouCompleteMe'
 Bundle 'mhinz/vim-startify'
 Bundle 'jiangmiao/auto-pairs'
 Bundle 'tpope/vim-fugitive'
-Bundle 'ctrlpvim/ctrlp.vim'
+"Bundle 'ctrlpvim/ctrlp.vim' fzf is a better replacement
+Bundle 'junegunn/fzf', { 'do': { -> fzf#install()  }  }
+Bundle 'junegunn/fzf.vim'
 
 "Bundle 'terryma/vim-multiple-cursors'
 "Bundle 'Chiel92/vim-autoformat'
@@ -101,13 +103,12 @@ Bundle 'ctrlpvim/ctrlp.vim'
 "=======================================================
 "easymotion setting
 map <Leader> <Plug>(easymotion-prefix)
-let g:EasyMotion_leader_key = ','
 let g:EasyMotion_startofline = 0	"keep cursor column when JK motion
 let g:EasyMotion_smartcase = 1
-map <Leader>l <Plug>(easymotion-lineforward)
-map <Leader>j <Plug>(easymotion-j)
-map <Leader>k <Plug>(easymotion-k)
-map <Leader>h <Plug>(easymotion-linebackward)
+noremap <Leader>OD <Plug>(easymotion-linebackward)
+noremap <Leader>OC <Plug>(easymotion-lineforward)
+noremap <Leader>OB <Plug>(easymotion-j)
+noremap <Leader>OA <Plug>(easymotion-k)
 
 "========================================================
 "airline setting
@@ -121,24 +122,22 @@ let g:airline#extensions#tabline#ignore_bufadd_pat = 'tagbar|nerd_tree'
 let g:airline#extensions#fugitiveline#enabled = 1
 let g:airline#extensions#branch#vcs_checks = ['untracked', ''] "fix a bug that dirty sign garbled in fugitive line
 let g:airline#extensions#keymap#enabled = 1
-let g:airline#extensions#ycm#enabled = 1
-let g:airline#extensions#ycm#error_symbol = 'E:'
-let g:airline#extensions#ycm#warning_symbol = 'W:'
-let g:airline#extensions#whitespace#enabled = 0
-let g:airline#extensions#tagbar#enabled = 0
+"let g:airline#extensions#ycm#enabled = 1
+"let g:airline#extensions#ycm#error_symbol = 'E:'
+"let g:airline#extensions#ycm#warning_symbol = 'W:'
 let g:airline_theme='dark'
-nmap <leader>1 <Plug>AirlineSelectTab1
-nmap <leader>2 <Plug>AirlineSelectTab2
-nmap <leader>3 <Plug>AirlineSelectTab3
-nmap <leader>4 <Plug>AirlineSelectTab4
-nmap <leader>5 <Plug>AirlineSelectTab5
-nmap <leader>6 <Plug>AirlineSelectTab6
-nmap <leader>7 <Plug>AirlineSelectTab7
-nmap <leader>8 <Plug>AirlineSelectTab8
-nmap <leader>9 <Plug>AirlineSelectTab9
-nmap <leader>- <Plug>AirlineSelectPrevTab
-nmap <leader><leader> <Plug>AirlineSelectNextTab
-nmap <leader>q :bd<CR>
+nnoremap <leader>1 <Plug>AirlineSelectTab1
+nnoremap <leader>2 <Plug>AirlineSelectTab2
+nnoremap <leader>3 <Plug>AirlineSelectTab3
+nnoremap <leader>4 <Plug>AirlineSelectTab4
+nnoremap <leader>5 <Plug>AirlineSelectTab5
+nnoremap <leader>6 <Plug>AirlineSelectTab6
+nnoremap <leader>7 <Plug>AirlineSelectTab7
+nnoremap <leader>8 <Plug>AirlineSelectTab8
+nnoremap <leader>9 <Plug>AirlineSelectTab9
+nnoremap <leader>- <Plug>AirlineSelectPrevTab
+nnoremap <leader><leader> <Plug>AirlineSelectNextTab
+nnoremap <leader>q :bd<CR>
 "=========================================================
 "nerdtree setting
 "au VimEnter * NERDTree
@@ -151,30 +150,24 @@ map <F2> :NERDTreeToggle<CR>
 let g:tagbar_ctags_bin='ctags'
 let g:tagbar_width=30
 map <F3> :Tagbar<CR>
-" autocmd BufReadPost *.cpp,*.c,*.h,*.hpp,*.cc,*.cxx call tagbar#autoopen() 
+autocmd BufReadPost *.cpp,*.c,*.h,*.hpp,*.cc,*.cxx call tagbar#autoopen()
 "===========================================================
 " YouCompleteMe setting
-let g:ycm_global_ycm_extra_conf = '~/.vim/ycm_extra_conf.py'
-let g:ycm_confirm_extra_conf = 0 
-let g:ycm_autoclose_preview_window_after_completion = 1
-let g:ycm_autoclose_preview_window_after_insertion = 1
-let g:ycm_max_diagnostics_to_display = 0
-let g:syntastic_error_symbol = '✗'
-let g:syntastic_warning_symbol = '⚠'
-let g:syntastic_enable_balloons = 1
+"let g:ycm_global_ycm_extra_conf = '~/.vim/ycm_extra_conf.py'
+"let g:ycm_confirm_extra_conf = 0
+"let g:ycm_autoclose_preview_window_after_completion = 1
+"let g:ycm_autoclose_preview_window_after_insertion = 1
+"let g:ycm_max_diagnostics_to_display = 0
+"let g:syntastic_error_symbol = '✗'
+"let g:syntastic_warning_symbol = '⚠'
+"let g:syntastic_enable_balloons = 1
 "===========================================================
-" ctrlp setting
-let g:ctrlp_map = '<c-p>'
-let g:ctrlp_cmd = 'CtrlPMRU'
-set wildignore+=*/tmp/*,*.so,*.swp,*.zip 
-
-let g:ctrlp_custom_ignore = '\v[\/]\.(git|hg|svn)$'
-let g:ctrlp_working_path_mode='ra'
-let g:ctrlp_match_window_bottom=1
-let g:ctrlp_max_height=15
-let g:ctrlp_match_window_reversed=0
-let g:ctrlp_mruf_max=500
-let g:ctrlp_follow_symlinks=1
+" fzf.vim setting
+nnoremap <C-p> :History<CR>
+set <M-t>=t
+nnoremap <M-t> :Files<CR>
+let g:fzf_vim = {}
+let g:fzf_vim.preview_window = ['right,50%,<70(up,40%)', 'ctRL-/']
 "===========================================================
 " numberpad mapping
 inoremap <Esc>Oq 1
