@@ -9,6 +9,9 @@ syntax on
 filetype plugin on "detect file type
 filetype plugin indent on "do indent by corresponding file type
 
+"disable auto line break for comments for all file type
+autocmd FileType * set formatoptions-=c
+
 "fix
 set backspace=indent,eol,start "fix problems that backspace do nothing during insert mode
 
@@ -84,7 +87,7 @@ Bundle 'vim-airline/vim-airline'
 Bundle 'vim-airline/vim-airline-themes'
 Bundle 'airblade/vim-gitgutter'
 Bundle 'scrooloose/nerdtree'
-Bundle 'majutsushi/tagbar'
+"Bundle 'majutsushi/tagbar'
 "Bundle 'Valloric/YouCompleteMe'
 Bundle 'mhinz/vim-startify'
 Bundle 'jiangmiao/auto-pairs'
@@ -105,6 +108,9 @@ Bundle 'junegunn/fzf.vim'
 map <Leader> <Plug>(easymotion-prefix)
 let g:EasyMotion_startofline = 0	"keep cursor column when JK motion
 let g:EasyMotion_smartcase = 1
+
+" (^[OA,^[OB,^[OC,^[OD]) are escape code of arrow keys, means (up,down,left,right) respectively
+" If `+f is work but not `+<arrow key>, check your vim version, updating to v9.x will fix this
 noremap <Leader>OD <Plug>(easymotion-linebackward)
 noremap <Leader>OC <Plug>(easymotion-lineforward)
 noremap <Leader>OB <Plug>(easymotion-j)
@@ -115,10 +121,10 @@ noremap <Leader>OA <Plug>(easymotion-k)
 set laststatus=2
 let g:airline_focuslost_inactive=1
 let g:airline_powerline_fonts = 1
-let g:airline#extensions#tabline#enabled = 1
-let g:airline#extensions#tabline#buffer_idx_mode = 1
-let g:airline#extensions#tabline#keymap_ignored_filetypes = ['tagbar', 'nerdtree']
-let g:airline#extensions#tabline#ignore_bufadd_pat = 'tagbar|nerd_tree'
+"let g:airline#extensions#tabline#enabled = 1
+"let g:airline#extensions#tabline#buffer_idx_mode = 1
+"let g:airline#extensions#tabline#keymap_ignored_filetypes = ['tagbar', 'nerdtree']
+"let g:airline#extensions#tabline#ignore_bufadd_pat = 'tagbar|nerd_tree'
 let g:airline#extensions#fugitiveline#enabled = 1
 let g:airline#extensions#branch#vcs_checks = ['untracked', ''] "fix a bug that dirty sign garbled in fugitive line
 let g:airline#extensions#keymap#enabled = 1
