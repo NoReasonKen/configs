@@ -114,13 +114,20 @@ done
 
 # Clone and pull powerlevel10k
 [[ -d ${zsh_custom}/themes/powerlevel10k ]] || git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${zsh_custom}/themes/powerlevel10k
-## Temparary disable pull check, due to server slow issue
+## Comment this line to disable pull check, if there is slow issue
 git -C ${zsh_custom}/themes/powerlevel10k pull &> /dev/null
 
 # Load oh-my-zsh
 source $ZSH/oh-my-zsh.sh
 
-CUSTOM_MANPATH="$HOME/man"
+# Custom bin folder
+CUSTOM_BINPATH="$HOME/bin"
+[[ -d $CUSTOM_BINPATH ]] || mkdir $HOME/bin
+
+# Custom man folder
+CUSTOM_MANPATH="$HOME/.man"
+[[ -d $CUSTOM_MANPATH ]] || mkdir $CUSTOM_MANPATH
+[[ -d $CUSTOM_MANPATH/man1 ]] || mkdir $CUSTOM_MANPATH/man1
 export MANPATH="$CUSTOM_MANPATH:$MANPATH"
 
 # You may need to manually set your language environment
@@ -172,7 +179,7 @@ bindkey \^u backward-kill-line
 setopt GLOB_DOTS
 
 # Make the prompt texts from zsh-autosuggestions darker
-export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#585858"
+export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#6a6a6a"
 
 function fg () {
     if [[ $# -eq 1 && $1 = - ]]; then
@@ -261,9 +268,6 @@ export INPUTRC=$HOME/.inputrc
 export COLUMNS=`tput cols`
 export LINES=`tput lines`
 
-# fix the run-help for zsh built-in command target to bash's man page
-export HELPDIR=/depot/zsh/zsh-5.9/share/zsh/5.9/help
-
 # more self-defined aliases
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 alias ls='ls --color=auto -CF'
@@ -350,6 +354,7 @@ rg_comp_folder="$HOME/.config/rg/complete"
 if [[ $(__has_rg) -ne 1 ]]; then
     wget https://github.com/BurntSushi/ripgrep/releases/download/14.0.3/ripgrep-14.0.3-x86_64-unknown-linux-musl.tar.gz
     tar xf ripgrep-14.0.3-x86_64-unknown-linux-musl.tar.gz
+    rm ripgrep-14.0.3-x86_64-unknown-linux-musl.tar.gz
     # Install binary
     mv ripgrep-14.0.3-x86_64-unknown-linux-musl/rg $HOME/bin/rg
     # Install completion
@@ -357,9 +362,30 @@ if [[ $(__has_rg) -ne 1 ]]; then
     mv ripgrep-14.0.3-x86_64-unknown-linux-musl/complete/* $rg_comp_folder
     # Install man
     mv ripgrep-14.0.3-x86_64-unknown-linux-musl/doc/rg.1 $CUSTOM_MANPATH/man1/
+
+    rm -r ripgrep-14.0.3-x86_64-unknown-linux-musl
 fi
 #check_before_append "FPATH" "$rg_comp_folder" ":"
 export FPATH=$rg_comp_folder:$FPATH
+
+# Check fd existance
+fd_comp_folder="$HOME/.config/fd/autocomplete"
+if [[ -z $(fd --version | cut -d " " -f 1) ]]; then
+    wget https://github.com/sharkdp/fd/releases/download/v8.7.1/fd-v8.7.1-x86_64-unknown-linux-gnu.tar.gz
+    tar xf fd-v8.7.1-x86_64-unknown-linux-gnu.tar.gz
+    rm fd-v8.7.1-x86_64-unknown-linux-gnu.tar.gz
+    # Install binary
+    mv fd-v8.7.1-x86_64-unknown-linux-gnu/fd $HOME/bin/fd
+    # Install completion
+    mkdir -p $fd_comp_folder
+    mv fd-v8.7.1-x86_64-unknown-linux-gnu/autocomplete/* $fd_comp_folder
+    # Install man
+    mv fd-v8.7.1-x86_64-unknown-linux-gnu/fd.1 $CUSTOM_MANPATH/man1/
+
+    rm -r fd-v8.7.1-x86_64-unknown-linux-gnu
+fi
+#check_before_append "FPATH" "$fd_comp_folder" ":"
+export FPATH=$fd_comp_folder:$FPATH
 
 # Check fzf existance
 if [[ ! -d $HOME/.fzf ]]; then
