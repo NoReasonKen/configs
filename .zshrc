@@ -82,6 +82,7 @@ COMPLETION_WAITING_DOTS="true"
 ## Note that zsh-syntax-highlighting must be the last plugin sourced.
 plugins=(alias-finder autojump colored-man-pages colorize fd fzf-tab thefuck sudo virtualenv zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
 
+fpath+=~/.zfunc
 autoload -U compinit && compinit
 
 
@@ -331,4 +332,7 @@ _fzf_compgen_dir() {
 # Install zlua
 [[ -d $ZSH_CUSTOM/plugins/zlua ]] || git clone https://github.com/skywind3000/z.lua $ZSH_CUSTOM/plugins/zlua
 eval "$(lua $HOME/.oh-my-zsh/custom/plugins/zlua/z.lua --init zsh enhanced)"
+
+# Source cargo
+source "$HOME/.cargo/env"
 
