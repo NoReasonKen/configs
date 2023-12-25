@@ -276,7 +276,7 @@ alias la='ls --color=auto -ACF'
 alias ll='ls --color=auto -aClFh'
 alias grep='grep --color=auto'
 # alias h='history -$((LINES - 1))' history for bash ver.
-alias duh='du -h --max-depth=1'
+alias duh='du -h -d 1'
 alias dfh='df -h'
 alias k9='kill -9'
 alias cl='clear;clear'
@@ -286,7 +286,7 @@ alias vimdiff='vim -d'
 alias g++17='g++ -std=c++17 -o'
 alias g++17g='g++ -std=c++17 -g -o'
 alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
-alias locate='locate -d $(echo $HOME)/.locate.db'
+alias locate="locate -d $HOME/.locate.db"
 
 # env setting for gcc & g++ compiler
 export CC=/usr/local/bin/gcc
