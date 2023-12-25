@@ -66,7 +66,7 @@ CASE_SENSITIVE="true"
 DISABLE_AUTO_TITLE="true"
 
 # Uncomment the following line to enable command auto-correction.
-ENABLE_CORRECTION="true"
+#ENABLE_CORRECTION="true"
 
 # Uncomment the following line to display red dots whilst waiting for completion.
 COMPLETION_WAITING_DOTS="true"
@@ -127,8 +127,9 @@ CUSTOM_BINPATH="$HOME/bin"
 # Custom man folder
 CUSTOM_MANPATH="$HOME/.man"
 [[ -d $CUSTOM_MANPATH ]] || mkdir $CUSTOM_MANPATH
-[[ -d $CUSTOM_MANPATH/man1 ]] || mkdir $CUSTOM_MANPATH/man1
 export MANPATH="$CUSTOM_MANPATH:$MANPATH"
+## Add folder for newest git man repo
+export MANPATH="$CUSTOM_MANPATH/git-manpages:$MANPATH"
 
 # You may need to manually set your language environment
 # export LANG=en_US.UTF-8
@@ -442,6 +443,7 @@ export _ZL_FZF_FLAG="+s -e +i"
 # *************************************************************
 export PATH=$(echo $PATH | tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
 export FPATH=$(echo $FPATH | tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
+export MANPATH=$(echo $MANPATH| tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
 
 
 autoload -Uz compinit && compinit # Load completions

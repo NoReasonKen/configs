@@ -53,7 +53,7 @@ set wildmode=list:longest,full
 "	2. select full command
 
 "theme and color
-set background=dark "set theme
+"set background=dark "set theme
 set t_Co=256 "set color number supported
 
 "lists unprintable if 'set list'
@@ -131,7 +131,6 @@ let g:airline#extensions#keymap#enabled = 1
 "let g:airline#extensions#ycm#enabled = 1
 "let g:airline#extensions#ycm#error_symbol = 'E:'
 "let g:airline#extensions#ycm#warning_symbol = 'W:'
-let g:airline_theme='dark'
 nnoremap <leader>1 <Plug>AirlineSelectTab1
 nnoremap <leader>2 <Plug>AirlineSelectTab2
 nnoremap <leader>3 <Plug>AirlineSelectTab3
