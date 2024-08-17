@@ -19,6 +19,7 @@ set backspace=indent,eol,start "fix problems that backspace do nothing during in
 set nocompatible "disable vi compatibe to enable some advance feature
 
 "coding
+scriptencoding utf-8
 set encoding=utf-8
 set fileencodings=utf-8,utf-16,big5,gbk,euc-jp,cp950
 
@@ -62,6 +63,9 @@ set listchars=tab:⇤–⇥,space:·,trail:·,precedes:⇠,extends:⇢,nbsp:×
 "===========================================================
 " set color scheme
 colorscheme molokai
+" transparant background
+hi NonText ctermbg=none
+hi Normal guibg=NONE ctermbg=NONE
 "===========================================================
 " Vundle Setting
 let iCanHazVundle=1
@@ -95,6 +99,10 @@ Bundle 'tpope/vim-fugitive'
 "Bundle 'ctrlpvim/ctrlp.vim' fzf is a better replacement
 Bundle 'junegunn/fzf', { 'do': { -> fzf#install()  }  }
 Bundle 'junegunn/fzf.vim'
+Plugin 'dense-analysis/ale'
+Bundle 'tpope/vim-surround'
+Bundle 'tpope/vim-repeat'
+Bundle 'haya14busa/vim-poweryank'
 
 "Bundle 'terryma/vim-multiple-cursors'
 "Bundle 'Chiel92/vim-autoformat'
@@ -123,6 +131,7 @@ let g:airline_focuslost_inactive=1
 let g:airline_powerline_fonts = 1
 "let g:airline#extensions#tabline#enabled = 1
 "let g:airline#extensions#tabline#buffer_idx_mode = 1
+let g:airline#extensions#tabline#buffer_idx_mode = 1
 "let g:airline#extensions#tabline#keymap_ignored_filetypes = ['tagbar', 'nerdtree']
 "let g:airline#extensions#tabline#ignore_bufadd_pat = 'tagbar|nerd_tree'
 let g:airline#extensions#fugitiveline#enabled = 1
@@ -147,7 +156,7 @@ nnoremap <leader>q :bd<CR>
 "nerdtree setting
 "au VimEnter * NERDTree
 let NERDTreeWinPos='left'
-let NERDTreeWinSize=30
+let NERDTreeWinSize=40
 map <F2> :NERDTreeToggle<CR>
 "==========================================================
 "tagbar setting
@@ -173,6 +182,11 @@ set <M-t>=t
 nnoremap <M-t> :Files<CR>
 let g:fzf_vim = {}
 let g:fzf_vim.preview_window = ['right,50%,<70(up,40%)', 'ctRL-/']
+"===========================================================
+" Write this in your vimrc file
+let g:ale_lint_on_text_changed = 'never'
+let g:ale_lint_on_insert_leave = 0
+let g:ale_lint_on_enter = 0
 "===========================================================
 " numberpad mapping
 inoremap <Esc>Oq 1
