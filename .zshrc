@@ -23,7 +23,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # If you come from bash you might have to change your $PATH.
-export PATH=$HOME/bin:/usr/local/bin:$PATH
+#export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
 export ZSH=$HOME/.oh-my-zsh
@@ -66,7 +66,7 @@ CASE_SENSITIVE="true"
 DISABLE_AUTO_TITLE="true"
 
 # Uncomment the following line to enable command auto-correction.
-ENABLE_CORRECTION="true"
+#ENABLE_CORRECTION="true"
 
 # Uncomment the following line to display red dots whilst waiting for completion.
 COMPLETION_WAITING_DOTS="true"
@@ -129,8 +129,9 @@ CUSTOM_BINPATH="$HOME/bin"
 # Custom man folder
 CUSTOM_MANPATH="$HOME/.man"
 [[ -d $CUSTOM_MANPATH ]] || mkdir $CUSTOM_MANPATH
-[[ -d $CUSTOM_MANPATH/man1 ]] || mkdir $CUSTOM_MANPATH/man1
 export MANPATH="$CUSTOM_MANPATH:$MANPATH"
+## Add folder for newest git man repo
+export MANPATH="$CUSTOM_MANPATH/git-manpages:$MANPATH"
 
 # You may need to manually set your language environment
 # export LANG=en_US.UTF-8
@@ -278,7 +279,7 @@ alias la='ls --color=auto -ACF'
 alias ll='ls --color=auto -aClFh'
 alias grep='grep --color=auto'
 # alias h='history -$((LINES - 1))' history for bash ver.
-alias duh='du -h --max-depth=1'
+alias duh='du -h -d 1'
 alias dfh='df -h'
 alias k9='kill -9'
 alias cl='clear;clear'
@@ -288,7 +289,7 @@ alias vimdiff='vim -d'
 alias g++17='g++ -std=c++17 -o'
 alias g++17g='g++ -std=c++17 -g -o'
 alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
-alias locate='locate -d $(echo $HOME)/.locate.db'
+alias locate="locate -d $HOME/.locate.db"
 
 # env setting for gcc & g++ compiler
 export CC=/usr/local/bin/gcc
@@ -447,6 +448,7 @@ source "$HOME/.cargo/env"
 # *************************************************************
 export PATH=$(echo $PATH | tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
 export FPATH=$(echo $FPATH | tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
+export MANPATH=$(echo $MANPATH| tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
 
 
 autoload -Uz compinit && compinit # Load completions
