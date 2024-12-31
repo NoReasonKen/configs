@@ -3,7 +3,10 @@
 # ***************************************************************
 
 # Remove the trailing $HOME/bin in PATH, which is added by /etc/zprofile
-export PATH=${PATH%$HOME/bin}
+if [[ -f "/etc/zprofile" ]]; then
+    export PATH=${PATH%$HOME/bin}
+fi
+export PATH="$HOME/bin:$PATH"
 
 # Use 'ZSH_PROF=1 zsh -ic zprof' to profile shell functions
 # Useful to find the slow modules or actions
