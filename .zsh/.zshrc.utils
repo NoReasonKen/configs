@@ -1,0 +1,46 @@
+h () {
+    if [[ $# -eq 1 ]]; then
+        if [[ $1 -ge 0 ]]; then
+            history -"$1"
+        else
+            history -"$((-1 * $1))"
+        fi
+    elif [[ $# -eq 0 ]]; then
+        history -"$((LINES - 1))"
+    fi
+}
+
+fg () {
+    if [[ $# -eq 1 && $1 == - ]]; then
+        builtin fg %-
+    else
+        builtin fg %"$*"
+    fi
+}
+
+bg () {
+    if [[ $# -eq 1 && $1 == - ]]; then
+        builtin bg %-
+    else
+        builtin bg %"$*"
+    fi
+}
+
+# Make zsh forward-word, backword-word jump to end of word
+# For forward-word, replace `forward-word` with `emacs-forward-word`.
+#zle -A emacs-forward-word forward-word
+# For `backward-word`
+zle -N backward-word backward-word-end
+backward-word-end() {
+    # Move to the beginning of the current word.
+    zle .backward-word
+
+    # If we're at the beginning of the buffer, we don't need to do anything else.
+    (( CURSOR )) ||
+            return
+
+    # Otherwise, move to the end of the word before the current one.
+    zle .backward-word
+    zle .emacs-forward-word
+}
+

@@ -1,0 +1,94 @@
+#!/u/chehuang/bin/bash
+help="Usage: map_depot_path_sh [OPTION]... [PATH]
+Help mapping between path and depot path
+options:
+    -m, --mode [MODE]       Specify mode, can be {qa}
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+VALID_MODES=("qa")
+
+mode=""
+verbose=false
+path=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -m|--mode)
+            shift; mode=$1; shift
+            [[ ! ${VALID_MODES[@]} =~ $mode ]] && echo "Error: Invalid mode, valid modes: (${VALID_MODES[@]})"
+            ;;
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            [[ -n $path ]] && { echo "Error: Can't specify multiple paths"; exit 1; }
+            path=$1; shift
+            ;;
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "mode=$mode; verbose=$verbose; path=$path" >&2
+
+if [[ -f $path ]]; then
+    is_file=true
+else
+    is_file=false
+fi
+
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "is_file: $is_file" >&2
+
+case $mode in
+    qa)
+        PROJECT_BLACKLIST=( "nightly" "nightly_weekend" )
+
+        IFS='/' read -r -a arr <<< "$path"
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "path=${arr[*]}" >&2
+
+        if [[ "${arr[6]}" == "main" ]]; then
+            branch="${arr[6]}/dev"
+        else
+            branch="${arr[6]%_*}/${arr[6]##*_}"
+        fi
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "branch=$branch" >&2
+
+        project=${arr[9]}
+        [[ ${PROJECT_BLACKLIST[@]} =~ $project ]] && project=${arr[10]}
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "project=$project" >&2
+
+        if [[ $is_file == true ]]; then
+            dir_name=${path%/*}
+        else
+            dir_name=$path
+        fi
+
+        testcase_path=$(readlink -e "$dir_name/run") || { echo "Error: Invalid path"; exit 1; }
+
+        remain=""
+        IFS='/' read -r -a arr <<< "$testcase_path"
+        for i in "${!arr[@]}"
+        do
+            if [[ ${arr[$i]} == "checker" ]]; then
+                remain=$(printf "/%s" "${arr[@]:$i}")
+                break
+            fi
+        done
+        remain=${remain#/}
+        remain=${remain%/*}
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "remain=$remain" >&2
+
+        depot_path="//cktsim/qa/$branch/$project/unit_pw/${remain}"
+        if [[ $is_file == true ]]; then
+            depot_path="$depot_path/$(basename "$path")"
+        fi
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "depot_path=$depot_path" >&2
+
+        echo "$depot_path"
+        ;;
+esac

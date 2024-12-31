@@ -1,0 +1,8 @@
+#!/u/chehuang/bin/bash
+
+export LSB_STDOUT_DIRECT=Y
+
+if [[ -n "$__X11_SERVER" && "$(hostname)" != "$__X11_SERVER" ]]; then
+    [[ -z "$CITRIX_REMOTE_DISPLAY" ]] && export CITRIX_REMOTE_DISPLAY="$__X11_SERVER:1.0"
+fi
+

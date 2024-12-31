@@ -1,0 +1,457 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: lsf_sh <COMMAND>
+Supports short keys for usual lsf commands series
+options:
+    --dry-run               Only show the constructed command instead of running it
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+sub-commands:
+    modules
+        List loadable modules or apps of specific module
+        usage: lsf_sh modules [<MODULE>]
+        example: lsf_sh modules
+        example: lsf_sh modules edag_batch1
+    jobs
+        Display submitted jobs in specific module
+        usage: lsf_sh jobs <MODULE> [<APP>]
+        example: lsf_sh jobs edag_perf
+        example: lsf_sh jobs edag_batch1 batch_cme
+    kill
+        Kill jobs in specific app
+        usage: lsf_sh kill [<OPTION>...] [<MODULE>] [<JOB-ID>]
+        example: lsf_sh kill edag_int 1234567  # Without interactive-kill, both module and job-id are needed
+        example: lsf_sh kill -i  # Search in all possible modules, might be slow
+        example: lsf_sh kill -i edag_int  # Only search in specific module
+        options:
+            -m, --module <MODULE>   Specify the module which the job belongs to
+            -i, --interactive-kill  Kill job by interactively selecting
+    hist
+        Display history of submitted jobs in specific module
+        usage: lsf_sh hist [<OPTION>...] <MODULE> [<APP>]
+        example: lsf_sh hist -l -a edag_batch2 batch_cme
+        options:
+            -l, --long          Output with long format
+            --------------------------------------------------
+            -a, --all           Output all categories jobs (overwrite -p,-r,-s,-d)
+            -p, --pending       Output pending jobs (cumulative)
+            -r, --running       Output running jobs (cumulative) (Default)
+            -s, --suspend       Output suspend jobs (cumulative)
+            -d, --done          Output done jobs (cumulative)
+            --------------------------------------------------
+            -i, --job-id        Output only the job with this id
+    sub
+        Submit job, refer to sub-command 'modules' for app list (R&D usually use *_cme as app)
+        usage: lsf_sh sub [<OPTION>...] <COMMAND>
+        example:
+            For batch submit jobs
+            lsf_sh sub -m edag_batch1 -o \"-app batch_cme -R \\\"select[os=CS7.3]\\\" -R \\\"rusage[mem=10G]\\\" -P <tag> -We 10:0\" custom_compiler
+            <tag>=\"harness=sysreg:#:product=primewave:#:project=primewave:#:identifier=\$(whoami)_\$(date +\"%Y-%m-%d_%H:%M:%S\")\"
+            ---
+            For interactive shell
+            lsf_sh sub -m edag_int -o \"-app int_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\"  -P <tag> -We 10:0 -Is csh\"
+            <tag>=\"harness=sysreg:#:product=primewave:#:project=primewave:#:identifier=\$(whoami)_\$(date +\"%Y-%m-%d_%H:%M:%S\")\"
+            ---
+            For more about tags, refer to https://jiradocs.internal.synopsys.com/display/LSF/LSF+Job+Tagging+information
+        options:
+            -m, --module <MODULE>           Module(farm) to submit command
+            -o, --sub-options <OPTIONS>     Options will be passed to bsub, cumulative
+                                            Refer to 'https://www.ibm.com/docs/en/spectrum-lsf/10.1.0?topic=bsub-options'
+            -P, --preset <ENUM>             Use preset enums. They are order irrelevant, and any explicit declared
+                                            params will override params in preset.
+                                            B(batch)='-m edag_batch1 -o \"-app batch_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\" -P <tag> -We 10:0\"'
+                                            I(integrate)='-m edag_int -o \"-app int_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\" -P <tag> -We 240:0\"'
+                                            <tag>=\"harness=sysreg:#:product=primewave:#:project=primewave:#:identifier=\$(whoami)_\$(date +\"%Y-%m-%d_%H:%M:%S\")\"
+                                            E.G. 'lsf_sh -We 1:0 -P B -m edag_batch2' ===
+                                                 'lsf_sh -m edag_batch2 -o \"-app batch_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\" -P <tag> -We 1:0'
+    attach
+        Attach to current exist interactive shell session with interactive select
+        usage: lsf_sh attach
+        example:
+            lsf_sh attach
+"
+
+MODULES=(
+    "edag_int"
+    "edag_batch1"
+    #"edag_batch2"
+    #"edag_perf"
+    #"edag_shared"
+)
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+[[ $# -le 0 ]] && echo "$help" && exit 0
+
+cmd_str=""
+sub_command="$1"
+module=""
+app=""
+# (long-format all-job pending-job running-job suspend-job done-job)
+hist_args=(false false false false false false)
+job_id=""
+interactive_shell=""
+sub_options=""
+command=""
+interactive_kill=false
+dry_run=false
+verbose=false
+
+# Arguments processing start
+shift
+case $sub_command in
+    -h|--help)
+        echo "$help" && exit 0
+        ;;
+    modules)
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --dry-run)
+                    dry_run=true
+                    ;;
+                -v|--verbose)
+                    verbose=true
+                    ;;
+                *)
+                    [[ -n "$module" ]] && { echo "Error: Command 'modules' do not accept multiple modules" && exit 1; }
+                    module="$1"
+                    ;;
+            esac
+            shift
+        done
+        utils::verbose --msg-color "${CYAN}" "sub_command=modules; MODULE=$module" >&2
+        ;;
+    jobs)
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --dry-run)
+                    dry_run=true
+                    ;;
+                -v|--verbose)
+                    verbose=true
+                    ;;
+                *)
+                    if [[ -n "$module" ]]; then
+                        [[ -n "$app" ]] && { echo "Error: Command 'jobs' do not accept multiple modules or apps" && exit 1; }
+                        app="$1"
+                    else
+                        module="$1"
+                    fi
+                    ;;
+            esac
+            shift
+        done
+        [[ -z "$module" ]] && { echo "Error: Missing module" && exit 1; }
+        utils::verbose --msg-color "${CYAN}" "sub_command=jobs; MODULE=$module; APP=$app" >&2
+        ;;
+    kill)
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                -m|--module)
+                    shift; module="$1"
+                    ;;
+                -i|--interactive-kill)
+                    interactive_kill=true
+                    ;;
+                --dry-run)
+                    dry_run=true
+                    ;;
+                -v|--verbose)
+                    verbose=true
+                    ;;
+                *)
+                    [[ -n "$job_id" ]] && { echo "Error: Command 'jobs' do not accept multiple job-ids" && exit 1; }
+                    job_id="$1"
+                    ;;
+            esac
+            shift
+        done
+        if [[ "$interactive_kill" == false ]]; then
+            [[ -z "$module" ]] && { echo "Error: Missing module" && exit 1; }
+            [[ -z "$job_id" ]] && { echo "Error: Missing job-id" && exit 1; }
+        fi
+        utils::verbose --msg-color "${CYAN}" "sub_command=kill; MODULE=$module; APP=$app; JOB-ID=$job_id; interactive-kill=$interactive_kill" >&2
+        ;;
+    hist)
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --dry-run)
+                    dry_run=true
+                    ;;
+                -v|--verbose)
+                    verbose=true
+                    ;;
+                -l|--long)
+                    hist_args[0]=true
+                    ;;
+                -a|--all)
+                    hist_args[1]=true
+                    ;;
+                -p|--pending)
+                    hist_args[2]=true
+                    ;;
+                -r|--running)
+                    hist_args[3]=true
+                    ;;
+                -s|--suspend)
+                    hist_args[4]=true
+                    ;;
+                -d|--done)
+                    hist_args[5]=true
+                    ;;
+                -i|--job-id)
+                    shift; job_id=$1
+                    ;;
+                *)
+                    if [[ -n "$module" ]]; then
+                        [[ -n "$app" ]] && { echo "Error: Command 'jobs' do not accept multiple modules or apps" && exit 1; }
+                        app="$1"
+                    else
+                        module="$1"
+                    fi
+                    ;;
+            esac
+            shift
+        done
+        [[ -z "$module" ]] && { echo "Error: Missing module" && exit 1; }
+        utils::verbose --msg-color "${CYAN}" "sub_command=hist; MODULE=$module; APP=$app; long=${hist_args[0]}; all=${hist_args[1]}; pending=${hist_args[2]}; running=${hist_args[3]}; suspend=${hist_args[4]}; done=${hist_args[5]}; job-id=$job_id" >&2
+        ;;
+    sub)
+        _sub_preset=""
+        _sub_args=()
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                -P|--preset)
+                    shift;  _sub_preset=$1; shift
+                    ;;
+                *)
+                    _sub_args+=("$1"); shift
+                    ;;
+            esac
+        done
+
+        _tag="\"harness=sysreg:#:product=primewave:#:project=primewave:#:identifier=\$(whoami)_\$(date +\"%Y-%m-%d_%H:%M:%S\")\""
+        while read -rn 1 ch; do
+            case $ch in
+                B|b)
+                    module="edag_batch1"
+                    sub_options="-app batch_cme -R \"select[os=AlmaLinux8.4]\" -R \"rusage[mem=32G]\" -P $_tag -We 10:0"
+                    ;;
+                I|i)
+                    module="edag_int"
+                    sub_options="-app int_cme -R \"select[os=AlmaLinux8.4]\" -R \"rusage[mem=32G]\" -P $_tag -We 240:0 -Is csh"
+                    ;;
+            esac
+        done < <(echo -n "$_sub_preset")
+ 
+        set -- "${_sub_args[@]}"
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --dry-run)
+                    dry_run=true
+                    ;;
+                -v|--verbose)
+                    verbose=true
+                    ;;
+                -m|--module)
+                    shift; module="$1"
+                    ;;
+                -o|--sub-options)
+                    shift; sub_options+=" $1"
+                    ;;
+                *)
+                    command+=" $1"
+                    ;;
+            esac
+            shift
+        done
+        [[ -z "$module" ]] && { echo "Error: Missing module to load" && exit 1; }
+        [[ "$sub_options" == *"-Is "* ]] && { __tmp="${sub_options##*-Is }"; interactive_shell="${__tmp%%( *|$)}"; }
+        [[ -z "$interactive_shell" && -z "$command" ]] && { echo "Error: Missing command to execute" && exit 1; }
+
+        utils::verbose --msg-color "${CYAN}" "sub_command=sub; module=$module; sub-options=$sub_options; COMMAND=$command" >&2
+        ;;
+    attach)
+        module="edag_int"
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --dry-run)
+                    dry_run=true
+                    ;;
+                -v|--verbose)
+                    verbose=true
+                    ;;
+                *)
+                    echo "Error: Invalid parameters for command 'attach'"
+                    exit 1
+                    ;;
+            esac
+            shift
+        done
+        utils::verbose --msg-color "${CYAN}" "sub_command=attach; modeule=$module" >&2
+        ;;
+    *)
+        echo "Error: Unknown sub-command '$1'" && exit 1
+        ;;
+esac
+# Arguments processing end
+
+# Construct command string start
+_src_cmd="source /global/lsf/cells/$module/conf/profile.lsf"
+case "$sub_command" in
+    modules)
+        if [[ -n "$module" ]]; then
+            cmd_str="$_src_cmd && bapp"
+        else
+            cmd_str="echo ${MODULES[*]}"
+        fi
+        ;;
+    jobs)
+        cmd_str="$_src_cmd && bjobs"
+        [[ -n "$app" ]] && cmd_str+=" -app $app"
+        ;;
+    kill)
+        utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Running jobs exist:" >&2
+
+        # Find existing jobs
+        _MODULES=( "${MODULES[@]}" )
+        [[ -n "$module" ]] && _MODULES=( "$module" )
+
+        _jobs_module_arr=()
+        _jobs_str=""
+        declare -i _i=1
+        for _module in "${_MODULES[@]}"; do
+            printf "    %b%b%b%b%b\n" "[" "$CYAN" "$_module" "$NC" "] " >&2
+            _hist_jobs="$(lsf_sh hist "$_module" -r | tail -n +2)"
+            _jobs_str="$(printf "%s\n%s" "$_jobs_str" "$(tail -n +2 <<< "$_hist_jobs")")"
+
+            declare -i _i2=0
+            while read -r line; do
+                if [[ "$_i2" -eq 0 ]]; then
+                    echo "    $line"
+                else
+                    printf "%b%b%b%b%b%b\n" "[" "$CYAN" "$_i" "$NC" "] " "$line" >&2
+                    _jobs_module_arr+=( "$(awk '{print $1}' <<< "$line"):$_module" )
+                    _i+=1
+                fi
+                _i2+=1
+            done <<< "$_hist_jobs"
+        done
+        _jobs_str="$(tail -n +2 <<< "$_jobs_str")"
+
+        _prompt="$(utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Type index or job-id to kill: ")"
+        _input=""
+        while [[ -z "$_input" ]]; do
+            read -r -p "$_prompt" _input
+            if [[ -n "$_input" ]]; then
+                _target_job="$(awk -v input="$_input" 'input == NR || input == $1' <<< "$_jobs_str")"
+                if [[ -z "$_target_job" ]]; then
+                    _input=""
+                    echo "Invalid index or job-id" >&2
+                elif [[ "$(wc -l <<< "$_target_job")" != 1 ]]; then
+                    _input=""
+                    echo "Ambiguous input, please try again with job-id" >&2
+                else
+                    _job_id="$(awk '{print $1}' <<< "$_target_job")"
+                    _module=""
+                    for elem in "${_jobs_module_arr[@]}"; do
+                        [[ "$(cut -d ':' -f 1 <<< "$elem")" == "$_job_id" ]] && _module="$(cut -d ':' -f 2 <<< "$elem")"
+                    done
+                    [[ -z "$_module" ]] && { echo "Error: Extract job module fail" >&2 ; exit 1; }
+                    cmd_str="source /global/lsf/cells/${_module}/conf/profile.lsf && bkill $_job_id"
+                fi
+            fi
+        done
+        ;;
+    hist)
+        cmd_str="$_src_cmd && bhist"
+        [[ -n "$app" ]] && cmd_str+=" -app $app"
+        [[ "${hist_args[0]}" == true ]] && cmd_str+=" -l"
+        if [[ "${hist_args[1]}" == true ]]; then
+            cmd_str+=" -a"
+        else
+            [[ "${hist_args[2]}" == true ]] && cmd_str+=" -p"
+            [[ "${hist_args[3]}" == true ]] && cmd_str+=" -r"
+            [[ "${hist_args[4]}" == true ]] && cmd_str+=" -s"
+            [[ "${hist_args[5]}" == true ]] && cmd_str+=" -d"
+        fi
+        [[ -n "$job_id" ]] && cmd_str+=" $job_id"
+        ;;
+    sub)
+        _identifier="${sub_options#*identifier=}"
+        _identifier="${_identifier%%:#:*}"
+        _identifier="${_identifier%\"*}"
+        cmd_str="$_src_cmd && bsub $sub_options"
+        if [[ -z "$interactive_shell" ]]; then
+            if ! grep -q " -o " <<< "$sub_options"; then
+                if [[ ! -d .lsf_logs ]]; then
+                    mkdir .lsf_logs
+                fi
+                cmd_str+=" -o \".lsf_logs/.${_identifier}.log\""
+            fi
+            if ! grep -q " -e " <<< "$sub_options"; then
+                if [[ ! -d .lsf_logs ]]; then
+                    mkdir .lsf_logs
+                fi
+                cmd_str+=" -e \".lsf_logs/.${_identifier}.err\""
+            fi
+            [[ -n "$CITRIX_REMOTE_DISPLAY" ]] && cmd_str+=" export DISPLAY=$CITRIX_REMOTE_DISPLAY\;"
+            cmd_str+=" $command"
+        else
+            export SHELL=""
+            export HOST=""
+            export DISPLAY="$CITRIX_REMOTE_DISPLAY"
+        fi
+        ;;
+    attach)
+            export SHELL=""
+            export HOST=""
+            export DISPLAY="$CITRIX_REMOTE_DISPLAY"
+            # Find existing shell job
+            _input=""
+            _hist_int="$(lsf_sh hist "$module" -r | tail -n +2)"
+            _job_ids_str="$(tail -n +2 <<< "$_hist_int")"
+            [[ -z "$_job_ids_str" ]] && { echo "Error: No existing interactive shell job" >&2 ; exit 1; }
+
+            utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Running interactive shells exist:" >&2
+
+            declare -i _i=0
+            while read -r line; do
+                if [[ "$_i" -eq 0 ]]; then
+                    echo "    $line"
+                else
+                    printf "%b%b%b%b%b%b\n" "[" "$CYAN" "$_i" "$NC" "] " "$line" >&2
+                fi
+                _i+=1
+            done <<< "$_hist_int"
+            _prompt="$(utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Type index or job-id to attach: ")"
+            while [[ -z "$_input" ]]; do
+                read -r -p "$_prompt" _input
+                if [[ -n "$_input" ]]; then
+                    _target_job="$(awk -v input="$_input" 'input == NR || input == $1' <<< "$_job_ids_str")"
+                    if [[ -z "$_target_job" ]]; then
+                        _input=""
+                        echo "Invalid index or job-id" >&2
+                    elif [[ "$(wc -l <<< "$_target_job")" != 1 ]]; then
+                        _input=""
+                        echo "Ambiguous input, please try again with job-id" >&2
+                    else
+                        _sh="$(awk '{print $3}' <<< "$_target_job")"
+                        _job_id="$(awk '{print $1}' <<< "$_target_job")"
+                        cmd_str="$_src_cmd && battach -L $(which "$_sh") $_job_id"
+                    fi
+                fi
+            done
+        ;;
+    *)
+        echo "Error: Unknown sub-command '$1'"
+        exit 1
+        ;;
+esac
+# Construct command string end
+
+utils::verbose --msg-color "${CYAN}" "cmd='$cmd_str'" >&2
+[[ "$dry_run" == false ]] && eval "$cmd_str"
+exec
+

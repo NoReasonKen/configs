@@ -1,0 +1,47 @@
+#!/u/chehuang/bin/bash
+help="Usage: ssh_x11_server_sh [<OPTION>...] <COMMAND>
+Send command to x11 server via ssh
+options:
+    -x, --x11-server        Use specified ip(host) instead of env '__X11_SERVER'
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+
+usage:
+    - Run xclock on x11 server
+        ssh_x11_server_sh \"~/bin/zsh -c \\\"xclock\\\"\"
+    - Run xclock on specified server
+        ssh_x11_server_sh -x myhost \"~/bin/zsh -c \\\"xclock\\\"\"
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "color_sh"
+source "utils_sh"
+
+x11_server="$__X11_SERVER"
+command=""
+verbose=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -x|--x11-server)
+            shift; x11_server="$1"
+            ;;
+        -v|--verbose)
+            verbose=true
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            command="$1"
+            ;;
+    esac
+    shift
+done
+
+utils::verbose --msg-color "${CYAN}" "x11_server=$x11_server; command=$command; verbose=$verbose" >&2
+
+[[ -z "$x11_server" ]] && { echo "Error: No x11_server specified, please either explicitly set --x11-server or set env '__X11_SERVER'" >&2 ; exit 1; }
+[[ -z "$command" ]] && { echo "Error: Empty command" >&2 ; exit 1; }
+
+ssh -t -X "$x11_server" "$command"
+

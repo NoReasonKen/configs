@@ -1,0 +1,86 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: p4_sync_sh [<OPTION>...] [-- <P4_SYNC_OPTION>...] [-- <P4_RESOLVE_OPTION>...]
+Call 'p4 sync' with additional custom processing
+options:
+    -q, --quiet         Disable outputs from 'p4 sync'
+    --dry-run           Only show the constructed command instead of running it
+    -v, --verbose		Show verbose messages in console
+    -h, --help			Display this help and exit
+    --                  Separator between custom_params, p4_sync_params, p4_resolve_params
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+p4_sync_params=""
+p4_resolve_params=""
+verbose=false
+quiet=false
+dry_run=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -q|--quiet)
+            quiet=true
+            shift
+            ;;
+        --dry-run)
+            dry_run=true
+            shift
+            ;;
+        -v|--verbose)
+            verbose=true
+            shift
+            ;;
+        -h|--help)
+            echo "$help"
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Error: Unknown parameter '$1'"
+            exit 1
+            ;;
+    esac
+done
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --)
+            shift
+            break
+            ;;
+        *)
+            p4_sync_params+="$1 "
+            shift
+            ;;
+    esac
+done
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        *)
+            p4_resolve_params+="$1 "
+            shift
+            ;;
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "quiet=$quiet; dry-run=$dry_run; p4_sync_params=$p4_sync_params; p4_resolve_params=$p4_resolve_params" >&2
+
+cmd="p4 sync ${p4_sync_params}2>&1"
+if [[ "$quiet" == true ]]; then
+    cmd+=" > /dev/null"
+else
+    cmd+=" | rg --color=always --passthru \"clobber\" | rg --color=always --passthru \"must resolve\""
+fi
+
+cmd+="; p4 resolve -am ${p4_resolve_params}2>&1 | rg --color=always --passthru \"resolve skipped\""
+
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "cmd=$cmd" >&2
+[[ "$dry_run" == false ]] && eval "$cmd"
+

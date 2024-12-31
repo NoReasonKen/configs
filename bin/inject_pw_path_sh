@@ -1,0 +1,312 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: inject_pw_path_sh [OPTION]... [FILE]
+Add pw and cc binary folder path to FILE  before 'custom_compiler' called
+options:
+    -m, --mode [MODE]       Specify mode, can be {local, pci, pci_v, nightly}
+    -o, --stdout            Print path to stdout instead of file
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+
+    ------local------
+    -r, --root [PATH]       Specify pw repo folder
+    -d, --debug             Is using debug build
+    -----------------
+    ------pci------
+    -b, --branch [NAME]     Specify branch name (e.g. v2023.12_rel)
+    -p, --project [NAME]    Specify project name (e.g. primewave_optimize)
+                            Default='primewave_optimize'
+    -c, --change [NUM]      Specify change number
+    -----------------
+    ------pci_v------
+    -b, --branch [NAME]     Specify branch name (e.g. v2023.12_rel)
+    -c, --change [NUM]      Specify change number
+    -----------------
+    -----nightly-----
+    -b, --branch [NAME]     Specify branch name (e.g. v2023.12_rel)
+                            Use latest if no date or change specified
+    -p, --project [NAME]    Specify project name (e.g. primewave_optimize)
+                            Default='primewave_optimize'
+    -d, --date [DATE]       Specify (e.g. 20240101)
+    -c, --change [NUM]      Specify change number
+    -----------------
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+mode=""
+stdout=false
+verbose=false
+root=""
+debug_build=false
+branch=""
+project="primewave_optimize"
+change=""
+date=""
+filename=""
+
+sub_args=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -m|--mode)
+            shift; mode=$1; shift
+            ;;
+        -o|--stdout)
+            stdout=true; shift
+            ;;
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            sub_args+=("$1"); shift
+            ;;
+    esac
+done
+
+case "$mode" in
+    local)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -r|--root)
+                    i=$((i+1)); root="${sub_args[$i]}"
+                    ;;
+                -d|--debug)
+                    debug_build=true
+                    ;;
+                -m|--mode|-o|--stdout|-v|--verbose)
+                    ;;
+                -*)
+                    echo "Error: Unknown parameter '${sub_args[$i]}' in mode $mode" && exit 1
+                    ;;
+                *)
+                    [[ -n "$filename" ]] && { echo "Error: Can't specify multiple files"; exit 1; }
+                    filename="${sub_args[$i]}"
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        utils::verbose --msg-color "${CYAN}" "mode=$mode; stdout=$stdout; root=$root; debug=$debug_build; FILE=$filename" >&2
+        ;;
+    pci)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -b|--branch)
+                    i=$((i+1)); branch="${sub_args[$i]}"
+                    ;;
+                -p|--project)
+                    i=$((i+1)); project="${sub_args[$i]}"
+                    ;;
+                -c|--change)
+                    i=$((i+1)); change="${sub_args[$i]}"
+                    ;;
+                -m|--mode|-o|--stdout|-v|--verbose)
+                    ;;
+                -*)
+                    echo "Error: Unknown parameter '${sub_args[$i]}' in mode $mode" && exit 1
+                    ;;
+                *)
+                    [[ -n "$filename" ]] && { echo "Error: Can't specify multiple files"; exit 1; }
+                    filename="${sub_args[$i]}"
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        utils::verbose --msg-color "${CYAN}" "mode=$mode; stdout=$stdout; branch=$branch; project=$project; change=$change; FILE=$filename" >&2
+        ;;
+    pci_v)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -b|--branch)
+                    i=$((i+1)); branch="${sub_args[$i]}"
+                    ;;
+                -c|--change)
+                    i=$((i+1)); change="${sub_args[$i]}"
+                    ;;
+                -m|--mode|-o|--stdout|-v|--verbose)
+                    ;;
+                -*)
+                    echo "Error: Unknown parameter '${sub_args[$i]}' in mode $mode" && exit 1
+                    ;;
+                *)
+                    [[ -n "$filename" ]] && { echo "Error: Can't specify multiple files"; exit 1; }
+                    filename="${sub_args[$i]}"
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        utils::verbose --msg-color "${CYAN}" "mode=$mode; stdout=$stdout; branch=$branch; change=$change; FILE=$filename" >&2
+        ;;
+    nightly)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -b|--branch)
+                    i=$((i+1)); branch="${sub_args[$i]}"
+                    ;;
+                -p|--project)
+                    i=$((i+1)); project="${sub_args[$i]}"
+                    ;;
+                -d|--date)
+                    i=$((i+1)); date="${sub_args[$i]}"
+                    ;;
+                -c|--change)
+                    i=$((i+1)); change="${sub_args[$i]}"
+                    ;;
+                -m|--mode|-o|--stdout|-v|--verbose)
+                    ;;
+                -*)
+                    echo "Error: Unknown parameter '${sub_args[$i]}' in mode $mode" && exit 1
+                    ;;
+                *)
+                    [[ -n "$filename" ]] && { echo "Error: Can't specify multiple files"; exit 1; }
+                    filename="${sub_args[$i]}"
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        utils::verbose --msg-color "${CYAN}" "mode=$mode; stdout=$stdout; branch=$branch; project=$project; date=$date; change=$change; FILE=$filename" >&2
+        ;;
+    *)
+        echo "Error: Invalid mode" && exit 1
+esac
+
+if [[ -z "$productdir" ]]; then
+    productdir="remote/swefs1/PE/products/cktsim"
+    echo "Warning: env 'productdir' is not set, use default $productdir"
+fi
+if [[ -n "$filename" ]]; then
+    [[ -f "$filename" ]] || { echo "Error: FILE does not exist"; exit 1; }
+    is_csh_script=false
+    if [[ "${filename##*.}" =~ k?csh$ ]] || grep -qE "#\!.+csh" "$filename"; then
+        is_csh_script=true
+    fi
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "is_csh_script=$is_csh_script" >&2
+else
+    [[ "$stdout" == true ]] || { echo "Error: Missing parameter FILE"; exit 1; }
+fi
+
+case "$mode" in
+    local)
+        [[ -z "$root" ]] &&  { echo "Error: --root is needed when MODE=local"; exit 1; }
+
+        bin_folder="${root}/object_root/bin-linux64/primewave_package"
+        [[ "$debug_build" == true ]] && bin_folder="${bin_folder}-g"
+
+        pw_bin="${bin_folder}/bin"
+        cc_bin="${bin_folder}/cc_image/bin"
+        ;;
+    pci)
+        [[ -z "$branch" ]] && { echo "Error: --branch is needed when MODE=pci"; exit 1; }
+        [[ -z "$project" ]] && { echo "Error --project is needed when MODE=pci"; exit 1; }
+        [[ -z "$change" ]] && { echo "Error --change is needed when MODE=pci"; exit 1; }
+
+        project_folder="${productdir}/${branch}/image/pci/${project}"
+        change_folder="$(fd -d 1 "^success_$change" "$project_folder")"
+
+        line_count="$(wc -l <<< "$change_folder")"
+        [[ "$line_count" -eq 0 ]] && { echo "Error: No change folder found"; exit 1; }
+        [[ "$line_count" -gt 1 ]] && { echo "Error: More than 1 change folders found"; exit 1; }
+        change_folder="$(head -n 1 <<< "$change_folder")"
+        [[ -L "$change_folder" && -e "$change_folder" ]] || { echo "Error: Invalid change folder link"; exit 1; }
+
+        bin_folder="${change_folder}/primewave"
+        pw_bin="${bin_folder}/Testing/bin"
+        cc_bin="${bin_folder}/Testing/.cc_image/bin"
+        ;;
+    pci_v)
+        [[ -z "$branch" ]] && { echo "Error: --branch is needed when MODE=pci_v"; exit 1; }
+        [[ -z "$change" ]] && { echo "Error --change is needed when MODE=pci_v"; exit 1; }
+
+        bin_folder="${productdir}/${branch}/image/pci_validator/pre_commit_${change}/primewave"
+
+        pw_bin="${bin_folder}/Testing/bin"
+        cc_bin="${bin_folder}/Testing/.cc_image/bin"
+        ;;
+    nightly)
+        [[ -z "$branch" ]] && { echo "Error: --branch is needed when MODE=nightly"; exit 1; }
+        [[ -z "$project" ]] && { echo "Error --project is needed when MODE=pci"; exit 1; }
+
+        project_folder="${productdir}/${branch}/image/nightly/${project}"
+        if [[ -n "$date" || -n "$change" ]]; then
+            folder=""
+            if [[ -n "$date" ]]; then
+                folder="$(fd --type d -d 1 "^D$date" "$project_folder")"
+                [[ -z "$folder" ]] && { echo "Error: Can't find nighly build for DATE=$date"; exit 1; }
+                [[ "$(wc -l <<< "$folder")" -gt 1 ]] && { echo "Error: More than 1 nightly build for DATE=$date"; exit 1; }
+            fi
+            if [[ -n "$change" ]]; then
+                if [[ -n "$folder" ]]; then
+                    folder="$(echo -e "$folder" | rg "$change")"
+                    wc -l <<< "$folder"
+                    [[ -z "$folder" ]] && { echo "Error: Can't find nighly build for DATE=$date, CHANGE=$change"; exit 1; }
+                    [[ "$(wc -l <<< "$folder")" -gt 1 ]] && { echo "Error: More than 1 nightly build for DATE=$date, CHANGE=$change"; exit 1; }
+                else
+                    folder="$(fd --type d -d 1 "$change$" "$project_folder")"
+                    [[ -z "$folder" ]] && { echo "Error: Can't find nighly build for CHANGE=$change"; exit 1; }
+                    [[ "$(wc -l <<< "$folder")" -gt 1 ]] && { echo "Error: More than 1 nightly build for CHANGE=$change"; exit 1; }
+                fi
+            fi
+            [[ -n "$folder" ]] && bin_folder="${folder:0:-1}"
+        else
+            bin_folder="${project_folder}/latest"
+        fi
+
+
+        pw_bin="${bin_folder}/Testing/bin"
+        cc_bin="${bin_folder}/Testing/.cc_image/bin"
+        ;;
+    *)
+        echo "Error: Invalid MODE or missing required parameters"
+        exit 1
+esac
+
+if [[ -d "$pw_bin" && -d "$cc_bin" ]]; then
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "pw folder='${pw_bin}'" >&2
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "cc folder='${cc_bin}'" >&2
+else
+    [[ ! -d "$pw_bin" ]] && { echo "Error: PW folder ($pw_bin) does not exist"; exit 1; }
+    [[ ! -d "$cc_bin" ]] && { echo "Error: CC folder ($cc_bin) does not exist"; exit 1; }
+fi
+
+str="${pw_bin}:${cc_bin}:\$PATH"
+[[ $stdout == true ]] && { echo "$str"; exit 0; }
+
+# For pw case, insert PATH definition right before 'custom_compiler'
+# For qa case, insert PATH definition right before 'source $SQA_ROOT/test_common/bin/run_common'
+# For ude3 case, insert PATH definition right before 'ude3 '
+valid_keyword=("custom_compiler" "source \\\$SQA_ROOT/.*/run_common" "ude3 .+")
+lines=()
+for keyword in "${valid_keyword[@]}"; do
+    lines+=("$(rg -n --color=never --stop-on-nonmatch "^[# ]*$keyword" "$filename" | head -n 1 | cut -d ':' -f 1)")
+done
+line_idx="-1"
+regex="^[0-9]+$" # The defect of bash and sh (but not zsh), make regex comparison fail if regex string is not  stored in a variable
+for ((i=0; i < ${#valid_keyword[@]}; i++)); do
+    if [[ "${lines[$i]}" =~ $regex ]]; then
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "Find ${valid_keyword[$i]} in line ${lines[$i]}" >&2
+        [[ "$line_idx" -eq "-1" || ${lines[$i]} -le $line_idx ]] && line_idx=$i
+        break
+    else
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "Can't find ${valid_keyword[$i]} in FILE" >&2
+    fi
+done
+
+[[ "$line_idx" -eq "-1" ]] && { echo "Error: Can't find any valid executable key words"; exit 1; }
+
+if [[ "$is_csh_script" == true ]]; then
+    str="setenv PATH $str"
+else
+    str="PATH=$str"
+fi
+
+line="${lines[$line_idx]}"
+sed -i "${line}i${str}" "$filename"
+utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Add '${str}' to ${filename}:${line}" >&2
+

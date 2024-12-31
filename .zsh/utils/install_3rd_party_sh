@@ -1,0 +1,227 @@
+#!/u/chehuang/bin/bash
+
+# Check tpm existence
+utils::install_tpm() {
+    [[ -d "$TPM_DIR" ]] || git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
+}
+
+
+# Check eza existence
+utils::install_eza() {
+    if [[ -z $(command -v eza) ]]; then
+        # Install binary
+        # If "GLIBC_2.18 not found" is complained, use eza_x86_64-unknown-linux-musl.tar.gz instead might help
+        wget "https://github.com/eza-community/eza/releases/download/v${EZA_VERSION}/eza_x86_64-unknown-linux-gnu.tar.gz" 2> /dev/null
+        if [[ -f "eza_x86_64-unknown-linux-gnu.tar.gz" ]]; then
+            tar xf eza_x86_64-unknown-linux-gnu.tar.gz
+            mv eza "$HOME/bin/eza"
+            rm eza_x86_64-unknown-linux-gnu.tar.gz
+        fi
+
+        # Install completion
+        wget https://raw.githubusercontent.com/eza-community/eza/main/completions/zsh/_eza 2> /dev/null
+        if [[ -f "_eza" ]]; then
+            mkdir -p "$EZA_COMP_DIR"
+            mv _eza "$EZA_COMP_DIR/"
+        fi
+    fi
+    export FPATH=$EZA_COMP_DIR:$FPATH
+}
+
+
+# Check bat existence
+utils::install_bat() {
+    if [[ -z $(command -v bat) ]]; then
+        # Install binary
+        wget "https://github.com/sharkdp/bat/releases/download/v${BAT_VERSION}/bat-v${BAT_VERSION}-x86_64-unknown-linux-musl.tar.gz" 2> /dev/null
+        if [[ -f "bat-v${BAT_VERSION}-x86_64-unknown-linux-musl.tar.gz" ]]; then
+            tar xf "bat-v${BAT_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            rm "bat-v${BAT_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            # Install binary
+            mv "bat-v${BAT_VERSION}-x86_64-unknown-linux-musl/bat" "$HOME/bin/bat"
+            # Install completion
+            mkdir -p "$BAT_COMP_DIR"
+            mv "bat-v${BAT_VERSION}-x86_64-unknown-linux-musl/autocomplete/"* "$BAT_COMP_DIR"
+            mv "${BAT_COMP_DIR}/bat.zsh" "${BAT_COMP_DIR}/_bat"
+            # Install man
+            mv "bat-v${BAT_VERSION}-x86_64-unknown-linux-musl/bat.1" "$CUSTOM_MANPATH/man1/"
+
+            rm -r "bat-v${BAT_VERSION}-x86_64-unknown-linux-musl"
+        fi
+    fi
+    export FPATH=$BAT_COMP_DIR:$FPATH
+}
+
+
+# Check rg existence
+utils::install_rg() {
+    if [[ -z "$(command -v rg)" ]]; then
+        wget "https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}/ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz" 2> /dev/null
+        if [[ -f "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz" ]]; then
+            tar xf "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            rm "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            # Install binary
+            mv "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl/rg" "$HOME/bin/rg"
+            # Install completion
+            mkdir -p "$RIPGREP_COMP_DIR"
+            mv "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl/complete/"* "$RIPGREP_COMP_DIR"
+            # Install man
+            mv "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl/doc/rg.1" "$CUSTOM_MANPATH/man1/"
+
+            rm -r "ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-musl"
+        fi
+    fi
+    export FPATH=$RIPGREP_COMP_DIR:$FPATH
+    export RIPGREP_CONFIG_PATH=$HOME/.ripgreprc
+}
+
+
+# Check fd existence
+utils::install_fd() {
+    if [[ $(fd --version 2> /dev/null) != "fd $FD_VERSION" ]]; then
+        wget "https://github.com/sharkdp/fd/releases/download/v${FD_VERSION}/fd-v${FD_VERSION}-x86_64-unknown-linux-musl.tar.gz" 2> /dev/null
+        if [[ -f "fd-v${FD_VERSION}-x86_64-unknown-linux-musl.tar.gz" ]]; then
+            tar xf "fd-v${FD_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            rm "fd-v${FD_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            # Install binary
+            mv "fd-v${FD_VERSION}-x86_64-unknown-linux-musl/fd" "$HOME/bin/fd"
+            # Install completion
+            mkdir -p "$FD_COMP_DIR"
+            mv "fd-v${FD_VERSION}-x86_64-unknown-linux-musl/autocomplete/"* "$FD_COMP_DIR"
+            # Install man
+            mv "fd-v${FD_VERSION}-x86_64-unknown-linux-musl/fd.1" "$CUSTOM_MANPATH/man1/"
+
+            rm -r "fd-v${FD_VERSION}-x86_64-unknown-linux-musl"
+        fi
+    fi
+    export FPATH=$FD_COMP_DIR:$FPATH
+}
+
+
+# Check fzf existence
+utils::install_fzf() {
+    # shellcheck disable=SC2153
+    if [[ ! -d "$FZF_DIR" ]]; then
+        git clone --depth 1 https://github.com/junegunn/fzf.git "$FZF_DIR"
+        # Install binary
+        "$FZF_DIR/install" --all --xdg
+        # Install man
+        cp "$FZF_DIR/man/man1/"* "$CUSTOM_MANPATH/man1/"
+    fi
+}
+
+
+# Check fzf-tab existence
+utils::install_fzf_tab() {
+    [[ -d "$FZF_TAB_DIR" ]] || git clone https://github.com/Aloxaf/fzf-tab "$FZF_TAB_DIR"
+}
+
+
+# thefuck configure alias
+# utils::install_thefuck() {
+#     eval $(thefuck --alias)
+# }
+
+
+# Install zlua
+utils::install_zlua() {
+    # shellcheck disable=SC2153
+    [[ -d "$ZLUA_DIR" ]] || git clone https://github.com/skywind3000/z.lua "$ZLUA_DIR"
+    eval "$(lua "$HOME"/.oh-my-zsh/custom/plugins/zlua/z.lua --init zsh enhanced)"
+}
+
+
+# Install patchelf
+utils::install_patchelf() {
+    if [[ $(patchelf --version 2> /dev/null) != "patchelf $PATCH_ELF_VERSION" ]]; then
+        mkdir "patchelf-${PATCH_ELF_VERSION}"
+        cd "patchelf-${PATCH_ELF_VERSION}" || { echo "Error: Can't enter 'patchelf-${PATCH_ELF_VERSION}'" >&2; return; }
+        wget "https://github.com/NixOS/patchelf/releases/download/${PATCH_ELF_VERSION}/patchelf-${PATCH_ELF_VERSION}-x86_64.tar.gz" 2> /dev/null
+        if [[ -f "patchelf-${PATCH_ELF_VERSION}-x86_64.tar.gz" ]]; then
+            tar xf "patchelf-${PATCH_ELF_VERSION}-x86_64.tar.gz"
+            rm "patchelf-${PATCH_ELF_VERSION}-x86_64.tar.gz"
+            # Install binary
+            mv bin/patchelf "$HOME/bin/patchelf"
+            # Install man
+            mv share/man/man1/patchelf.1 "$CUSTOM_MANPATH/man1/"
+
+        fi
+
+        cd ..
+        rm -r "patchelf-${PATCH_ELF_VERSION}"
+    fi
+}
+
+#-------------------------------------------------------------------
+utils::update_3rd_party() {
+    current="$(pwd)"
+
+    # update tpm
+    echo "Updating tpm ..."
+    if [[ -d "$TMP_DIR" ]]; then
+        # shellcheck disable=SC2164
+        cd "$TMP_DIR"
+        # shellcheck disable=SC1083
+        git fetch && [[ $(git rev-parse @) != $(git rev-parse @{u}) ]] && git pull
+    fi
+
+    # update eza
+    echo "Updating eza ..."
+    rm "$HOME/bin/eza"
+    utils::install_eza
+
+    # update rg
+    echo "Updating rg ..."
+    rm "$HOME/bin/rg"
+    utils::install_rg
+
+    # update fd
+    echo "Updating fd ..."
+    rm "$HOME/bin/fd"
+    utils::install_fd
+
+    # update fzf
+    echo "Updating fzf ..."
+    if [[ -d "$FZF_DIR" ]]; then
+        # shellcheck disable=SC2164
+        cd "$FZF_DIR"
+        # shellcheck disable=SC1083
+        git fetch
+        # shellcheck disable=SC1083
+        if [[ $(git rev-parse @) != $(git rev-parse @{u}) ]]; then
+            git pull && "$HOME/.fzf/install" --all --xdg
+            # shellcheck disable=SC1091
+            source "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzf.zsh"
+        fi
+        cp "$HOME/.fzf/man/man1/"* "$CUSTOM_MANPATH/man1/"
+    fi
+
+    # update fzf-tab
+    echo "Updating fzf-tab ..."
+    zsh_custom_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab"
+    if [[ -d "$zsh_custom_dir" ]]; then
+        # shellcheck disable=SC2164
+        cd "$zsh_custom_dir"
+        # shellcheck disable=SC1083
+        git fetch && [[ $(git rev-parse @) != $(git rev-parse @{u}) ]] && git pull
+    fi
+
+    # update zlua
+    echo "Updating zlua ..."
+    zlua_dir="$ZSH_CUSTOM/plugins/zlua"
+    if [[ -d "$zlua_dir" ]]; then
+        # shellcheck disable=SC2164
+        cd "$zlua_dir"
+        # shellcheck disable=SC1083
+        [[ $(git rev-parse @) != $(git rev-parse @{u}) ]] && git pull
+        lua "$HOME/.oh-my-zsh/custom/plugins/zlua/z.lua" --init zsh enhanced echo
+    fi
+
+    # update patchelf
+    echo "Updating patchelf ..."
+    rm "$HOME/bin/patchelf"
+    utils::install_patchelf
+
+    # shellcheck disable=SC2164
+    cd "$current"
+}
