@@ -1,0 +1,45 @@
+#!/u/chehuang/bin/bash
+
+# !!! Do not use this script directly, 'source disguise_vscode_src' instead
+
+VSCODE_SERVER_BIN_PATH_REGEX=".*/vscode-server/cli/servers/Stable-\w*/server/bin/remote-cli"
+VSCODE_SERVER_NODE_PATH_REGEX="^[^\s]+/vscode-server/cli/servers/Stable-\w*/server/node"
+
+rg="rg -M 0"
+live_remote_vscode_processes=$(ps aex -ww -o user,args | $rg "^$(whoami)" | cut -d " " -f 2- | $rg "$VSCODE_SERVER_NODE_PATH_REGEX" | $rg "VSCODE_IPC_HOOK_CLI")
+
+if [[ -z "$live_remote_vscode_processes" ]]; then
+    unset VSCODE_IPC_HOOK_CLI
+    PATH=$(tr ":" "\n" <<< "$PATH" | sed "\|$VSCODE_SERVER_BIN_PATH_REGEX|d" | xargs | tr " " ":")
+    echo "export PATH=$PATH"
+    echo "false"
+    echo "Error: Can't find any live remote vscode processes" >&2
+    exit 1
+fi
+
+if [[ "$(wc -l <<< "$live_remote_vscode_processes")" -gt 1 ]]; then
+    uniq_process_bin="$(awk '{print $1}' <<< "$live_remote_vscode_processes" | sort | uniq)"
+    if [[ "$(wc -l <<< "$uniq_process_bin")" -gt 1 ]]; then
+        echo "Warning: Multiple live remote vscode processes found" >&2
+        # shellcheck disable=SC1091,SC2034
+        source "$HOME/bin/utils_sh" && verbose=true
+        while IFS=$'\n' read -r process; do
+            utils::verbose --msg-color "${CYAN}" --prompt "* " "$(cut -d " " -f 1,2 <<< "$process") ..." >&2
+        done <<< "$live_remote_vscode_processes"
+    fi
+fi
+process="$(head -n 1 <<< "$live_remote_vscode_processes")"
+
+vscode_bin_folder=${process#* PATH=}
+vscode_bin_folder=${vscode_bin_folder%%:*}
+vscode_hook_cli=${process#*VSCODE_IPC_HOOK_CLI=}
+vscode_hook_cli=${vscode_hook_cli%% *}
+
+if [[ -d "$vscode_bin_folder" && -n "$vscode_hook_cli" ]]; then
+    PATH=$(tr ":" "\n" <<< "$PATH" | sed "\|$VSCODE_SERVER_BIN_PATH_REGEX|d" | xargs | tr " " ":")
+    echo "export PATH=$vscode_bin_folder:$PATH"
+    echo "export VSCODE_IPC_HOOK_CLI=$vscode_hook_cli"
+fi
+echo true
+exit 0
+

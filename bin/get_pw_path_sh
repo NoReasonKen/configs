@@ -1,0 +1,175 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: get_pw_path_sh [OPTION]...
+Add pw and cc binary folder path without duplicate
+options:
+    -l, --local         Use local build pw & cc, pw repo folder should be provide
+    -d, --debug         Use local debug build, meaningful only if --local specified
+    -v, --verbose		Show verbose messages in console
+    -h, --help			Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+params=""
+verbose=false
+use_local=""
+debug_build=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -l|--local)
+            shift
+            use_local=$1
+            shift
+            ;;
+        -d|--debug)
+            debug_build=true
+            shift
+            ;;
+        -v|--verbose)
+            verbose=true
+            shift
+            ;;
+        -h|--help)
+            echo "$help"
+            exit 0
+            ;;
+        *)
+            params+="$1 "
+            shift
+            ;;
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "local=$use_local; debug=$debug_build; params=$params" >&2
+
+if [[ -n "$use_local" ]]; then
+    bin_folder="${use_local}/object_root/bin-linux64/primewave_package"
+    [[ "$debug_build" = "true" ]] && bin_folder="${bin_folder}-g"
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "bin folder='${bin_folder}'" >&2
+
+    output="${bin_folder}/bin:${bin_folder}/cc_image/bin"
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "cc & pw path='${output}'" >&2
+else
+    output=$(csh -c "source ~qwang/runPW.csh $params" 2> /dev/null)
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "Output of ~qwang/runPW.csh:\n${output}" >&2
+
+    if ! echo "$output" | grep -q "PW Work Environment is Ready"; then # for not found case
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "Error occur:\n${output}" >&2
+        output=""
+    elif echo "$output" | grep "CAUTION: You are requiring CC Package!"; then # for case 1, 3
+        output=${output##*#### PW:} # remove longest regex substring '*#### PW:' from the beginning
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove prefix='${output}'" >&2
+
+        output=${output%/cdesigner*} # remove shortest regex substring '/cdesigner*' from the end
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove postfix='${output}'" >&2
+
+        output=$(echo "$output" | sed "s/\/primewave #### CC//g") # remove '/primewave #### CC' between two paths
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove impurity='${output}'" >&2
+    elif echo "$output" | grep "CC (Matched):"; then # for case 2
+        output=${output##*PrimeWave: } # remove longest regex substring '*PrimeWave: ' from the beginning
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove prefix='${output}'" >&2
+
+        output=${output%/cdesigner*} # remove shortest regex substring '/cdesigner*' from the end
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove postfix='${output}'" >&2
+
+        output=$(echo "$output" | xargs)
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "xargs='${output}'" >&2
+        output=$(echo "$output" | sed "s/\/primewave CC (Matched): /:/g") # replace '/primewave CC(Matched): ' to ':' between two paths
+        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove impurity='${output}'" >&2
+    else
+        utils::verbose -e --msg-color "${BGREEN}" --prompt "* " "Un-parsable output from ~qwang/runPW.csh:\n${output}" >&2
+        output=""
+    fi
+fi
+
+# Simple test to prevent unexpected output pollute PATH
+if echo "$output" | grep " "; then
+    utils::verbose -e --msg-color "${BGREEN}" --prompt "* " "Error: Suspicious output found:\n${output}" >&2
+    output=""
+fi
+
+path=$PATH
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Current path='${path}'" >&2
+
+if [[ -z "$output" ]]; then # Early exit if any problem happened
+    echo "$path"
+    echo "Error: Empty parsing result" >&2
+    exit 1
+else
+    output=$(echo "$output" | awk -F':' '{print $2":"$1}')
+fi
+
+pw_bin=$(which primewave |& grep -v "no primewave in")
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Current primewave path='${pw_bin}'" >&2
+pw_bin=${pw_bin%/primewave}
+
+cc_bin=$(which cdesigner |& grep -v "no cdesigner in")
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Current cdesigner path='${cc_bin}'" >&2
+cc_bin=${cc_bin%/cdesigner}
+
+if [ -n "$pw_bin" ]; then
+    path="${path//${pw_bin}:/}"
+    path="${path//:${pw_bin}/}"
+fi
+
+if [ -n "$cc_bin" ]; then
+    path="${path//${cc_bin}:/}"
+    path="${path//:${cc_bin}/}"
+fi
+
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Clean path='${path}'" >&2
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Final path:" >&2
+
+utils::verbose "  ${output}:${path}" >&2
+utils::verbose "" >&2
+echo "${output}:${path}"
+
+# Output case 1:
+# SQA_ROOT:/remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/clientstore/cktsim_u2023.03_sp2_rel/unit_pw
+# Using module: cdesigner-tools/2023.03-dev-004
+# #### CAUTION: You are requiring CC Package!                                ############################################
+# #### PW:/slowfs/sandwork/chehuang/pw_u2023.03_sp2_rel/object_root/bin-linux64/primewave_package/bin/primewave
+# #### PWSO Version used in PW:9223143
+# Looking for matched CC...
+# PWSO Version (9223143) Used in CC: /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
+# Found matched CC:/u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
+# #### PW:/slowfs/sandwork/chehuang/pw_u2023.03_sp2_rel/object_root/bin-linux64/primewave_package/bin/primewave
+# #### CC:/u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
+# ####PW Work Environment is Ready#######
+# ###########################################
+
+# Output case 2:
+# SQA_ROOT:/remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/clientstore/cktsim_u2023.03_sp2_rel/unit_pw
+# PrimeWave: /remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/image/nightly/primewave_optimize/D20230926_8454792/Installed/primewave/primewave/U-2023.03-SP2-T-20230926/bin/primewave
+# CC (Matched): /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
+# ###########################################
+# ####PW Work Environment is Ready#######
+# ###########################################
+
+# Output case 3:
+# SQA_ROOT:/remote/swefs1/PE/products/cktsim/v2023.12_rel/clientstore/cktsim_v2023.12_rel/unit_pw
+# Using module: cdesigner-tools/2023.03-dev-004
+# #### CAUTION: You are requiring CC Package!                                ############################################
+# #### PW:/remote/swefs1/PE/products/cktsim/v2023.12_rel/image/pci_validator/pre_commit_8531095/primewave/Testing/bin/primewave
+# #### CC:/slowfs/swe107/image/CUSTOMCOMPILER/V-2023.12/D20231106_9381009/Testing/bin/cdesigner
+# ###########################################
+# ####PW Work Environment is Ready#######
+# ###########################################
+
+# Output case not found:
+# SQA_ROOT:/remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/clientstore/cktsim_u2023.03_sp2_rel/unit_pw
+# Using module: cdesigner-tools/2023.03-dev-004
+# NOTICE: License variable for Matlab is not defined for general use.
+# You will need to manually set LM_LICENSE_FILE.
+# NOTICE: Global Mentor Graphics license server not defined for this site.
+# You will need to manually set LM_LICENSE_FILE.
+# #### CAUTION: You are requiring CC Package!                                ############################################
+# #### PW:/slowfs/sandwork/chehuang/pw_main/object_root/bin-linux64/primewave_package/bin/primewave
+# #### PWSO Version used in PW:9225403
+# Looking for matched CC...
+# PWSO Version (9223143) Used in CC: /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
+# PWSO Version (9223143) Used in CC: /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230925_9231754/Testing/bin/cdesigner
+# Error:Cannot find matched CC under the pool:/u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2!
+

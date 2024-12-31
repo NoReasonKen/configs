@@ -1,0 +1,55 @@
+#!/u/chehuang/bin/bash
+
+# shellcheck source-path=SCRIPTDIR
+source "color_sh"
+
+utils::verbose() {
+	local msg=""
+	local msg_color="$NC"
+	local prompt=""
+	local prompt_color="$YELLOW"
+
+    local is_force=false
+    local no_params=false
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--msg-color)
+				shift; msg_color="$1"; shift
+				;;
+			--prompt)
+				shift; prompt="$1"; shift
+				;;
+			--prompt-color)
+				shift; prompt_color="$1"; shift
+				;;
+            -f|--force)
+                is_force=true; shift
+                ;;
+            --)
+                no_params=true; shift
+                ;;
+			-*)
+                if [[ "$no_params" == true ]]; then
+                    msg+=" $1"; shift
+                else
+                    exit 1
+                fi
+                ;;
+			*)
+                msg+=" $1"; shift
+				;;
+		esac
+	done
+
+    msg="${msg:1}"
+
+    # shellcheck disable=SC2154
+	[[ "$verbose" == "" && "$is_force" == false ]] && { echo "'verbose' should be declared before using verbose()" >&2 && return 1; }
+
+	[[ "$verbose" == false && "$is_force" == false ]] && return 0
+
+    printf "%b%b" "${prompt_color}" "${prompt}"
+    printf "%b%b" "${msg_color}" "${msg}"
+    printf "%b" "${NC}\n"
+}
+

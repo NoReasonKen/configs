@@ -1,0 +1,69 @@
+#!/u/chehuang/bin/bash
+
+# Pruned, because vscode-remote-ssh can
+
+help="Usage: update_vscode_sh [OPTION]...
+Update vscode on remote
+options:
+    -y, --allyes		Answer yes for all questions
+    -h, --help			Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+verbose=true
+all_yes=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -y|--allyes)
+            all_yes=true
+            shift
+            ;;
+        -h|--help)
+            echo "$help"
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument '$1', use -h to get help"
+            exit 1
+    esac
+done
+
+sorted_license_detail_list=$(
+    (
+        find "$HOME/.vscode-server/bin" -maxdepth 2 -name "LICENSE" -type f -printf '%T+ %p\n'
+    ) | rg "LICENSE" | sort -r
+)
+
+[[ -n "$sorted_license_detail_list" ]] || { echo "Error: Can't find any vscode LICENSE" ; exit 1; }
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Found vscode LICENSE (sorted by time):" >&1
+echo "$sorted_license_detail_list"
+echo ""
+
+folders=$(echo "$sorted_license_detail_list" | sed -E 's/.+\s(.+\/\w+)\/.+/\1/')
+curr_folder=$(echo -E "$folders" | head -n 1)
+rm_folders=$(echo -E "$folders" | tail -n +2)
+IFS=$'\n' read -d '' -r -a rm_folders_arr <<< "$rm_folders"
+
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Current folder:" >&1
+echo "$curr_folder"
+
+# Make user confirm remove folder list, then remove if confirmed
+if [[ ${#rm_folders_arr[@]} -ne 0 ]]; then
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "rm folders:" >&1
+    printf "%s\n" "${rm_folders_arr[@]}"
+    if [[ $all_yes == true ]]; then
+        confirm=y
+    else
+        read -p "Continue? (y/n): " confirm
+    fi
+
+    if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+        for folder in "${rm_folders_arr[@]}"; do
+            folder="$HOME/.vscode-server/.${folder##*/}"
+            rm "${folder}.log" "${folder}.pid" "${folder}.token" 2> /dev/null
+        done
+        rm -r "${rm_folders_arr[@]}"
+    fi
+fi

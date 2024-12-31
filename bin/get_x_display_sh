@@ -1,0 +1,85 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: get_x_display_sh [<OPTION>...] <X_SERVER>
+options:
+    -u, --user <USER>   Specify another user instead of current user
+    -e, --env <ENV>     Specify another env instead of 'DISPLAY'
+    -v, --verbose		Show verbose messages in console
+    -h, --help			Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+xserver_name=""
+user_name="$(whoami)"
+env_name="DISPLAY"
+verbose=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -u|--user)
+            shift; user_name=$1; shift
+            ;;
+        -e|--env)
+            shift; env_name=$1; shift
+            ;;
+        -v|--verbose)
+            verbose=true
+            shift
+            ;;
+        -h|--help)
+            echo "$help"
+            exit 0
+            ;;
+        *)
+            if [[ -z "$xserver_name" ]]; then
+                xserver_name="$1"; shift
+            else
+                echo "Error: Can't accept multiple server" >&2
+                exit 1
+            fi
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "xserver=$xserver_name; user=$user_name; env=$env_name" >&2
+
+# End if not a ssh connection
+[[ -z "$SSH_CLIENT" ]] && { echo "$DISPLAY"; exit 0; }
+
+if [[ "$xserver_name" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    xserver_ip="$xserver_name"
+else
+    client_ip="$(cut -d " " -f 1 <<< "$SSH_CLIENT")"
+    host_msg="$(host "$xserver_name")" # host_msg="<xserver_name> has address xxx.xxx.xxx.xxx"
+    xserver_ip="${host_msg##* has address }"
+fi
+# End if connect from xserver
+[[ "$client_ip" == "$xserver_ip" ]] && { echo "$DISPLAY"; exit 0; }
+
+# If connect to xserver
+server_ip="$(cut -d " " -f 3 <<< "$SSH_CONNECTION")"
+if [[ "$server_ip" == "$xserver_ip" ]]; then
+   synopsys_tty="$(w --no-header | awk '{if ($1=="synopsys") {print $2}}')"
+   echo "$synopsys_tty"
+   exit 0
+fi
+[[ "$client_ip" == "$xserver_ip" ]] && { echo "$DISPLAY"; exit 0; }
+
+tty="$(w --no-header | awk '{print $1,$2,$3}' | rg "$user_name" | rg -m 1 "$xserver_name" | awk '{print $2}')"
+if [[ -z "$tty" && "$xserver_name" != "$xserver_ip" ]]; then
+    tty="$(w --no-header | awk '{print $1,$2,$3}' | rg "$user_name" | rg -m 1 "$xserver_ip" | awk '{print $2}')"
+fi
+
+if [[ -n "$tty" ]]; then
+    shell_pid="$(ps -u "$user_name" -o pid,tty | rg -m 1 "$tty" | awk '{print $1}')"
+    # shellcheck disable=SC2002
+    display="$(cat /proc/"$shell_pid"/environ 2> /dev/null | tr '\0' '\n' | rg "^$env_name=")"
+    echo "${display#"${env_name}"=}"
+    exit 0
+else
+    echo "${BASH_SOURCE[*]}:${LINENO}" >&2
+    echo "  Error: Can't find your tty on $(hostname) which connect from $xserver_name, please connect to $(hostname) from $xserver_name with ssh X11 forwarding first" >&2
+    exit 1
+fi
+

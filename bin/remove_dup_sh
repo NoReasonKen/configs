@@ -1,0 +1,42 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: remove_dup_sh [OPTION]... [INPUT]
+Remove duplicate element with specific delimiter
+options:
+    -d, --delimiter [CHAR]  Specific delimiter to split input string
+                            Default=' '
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+delimiter=" "
+input=""
+verbose=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -d|--delimiter)
+            shift; delimiter=$1; shift
+            ;;
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            if [[ -n "$input" ]]; then
+                echo "Error: Multiple inputs are not allowed"
+                exit 1
+            fi
+            input="$1"; shift
+            ;;
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "delimiter=$delimiter; input=$input" >&2
+
+#tr "$delimiter" "\n" <<< "$input" | tac | awk '!seen[$0]++' | tac | xargs | tr " " "$delimiter"
+tr "$delimiter" "\n" <<< "$input" | awk '!seen[$0]++' | xargs | tr " " "$delimiter"

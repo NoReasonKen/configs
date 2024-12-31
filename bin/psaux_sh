@@ -1,0 +1,101 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: psaux_sh [OPTION]...
+Call 'ps aux' then rg specific information
+options:
+    -c, --command [COMMAND]     Specify the focusing command
+    -u, --user [NAME]           Specify the focusing user name
+    -k, --kill [SIGNAL]         Send signal to kill listed processes interactively
+    -v, --verbose               Show verbose messages in console
+    -h, --help                  Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+command=""
+user=""
+kill_signal=""
+verbose=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -c|--command)
+            shift; command=$1; shift
+            ;;
+        -u|--user)
+            shift; user=$1; shift
+            ;;
+        -k|--kill)
+            shift; kill_signal=$1; shift
+            ;;
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            echo "Error: Unknown parameter '$1'" >&2
+            exit 1
+            ;;
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "command=$command; user=$user; kill=$kill_signal" >&2
+
+result="$(ps aux)"
+if [[ -n "$command" ]]; then
+    result="$(rg --color=always --max-columns 0 "$command" <<< "$result")"
+fi
+if [[ -n "$user" ]]; then
+    result="$(rg --color=always --max-columns 0 "$user" <<< "$result")"
+fi
+processes="$(rg --max-columns 0 -v "$(basename "$0")" <<< "$result")"
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Filtered processes:\n" >&2
+utils::verbose --msg-color "${CYAN}" "command=$command; user=$user; kill=$kill_signal" >&2
+
+if [[ -z "$kill_signal" ]]; then
+    [[ -n "$processes" ]] && echo "$processes"
+    exit 0
+fi
+
+kill_all=false
+quit=false
+prompt="    Yes (Y/y); No (N/n); Following all (A/a); Quit (Q/q): "
+while read -r line; do
+    [[ -z "$line" ]] && continue
+    echo "$line"
+
+    pid="$(awk '{print $2}' <<< "$line")"
+    if [[ "$kill_all" == true ]]; then
+        kill -"$kill_signal" "$pid"
+        continue
+    fi
+
+    input=""
+    while [[ -z "$input" ]]; do
+        read -u 3 -r -n 1 -p "$prompt" input
+        echo ""
+        case "$input" in
+            Y|y)
+                kill -"$kill_signal" "$pid"
+                ;;
+            N|n)
+                ;;
+            A|a)
+                kill -"$kill_signal" "$pid"
+                kill_all=true
+                ;;
+            Q|q)
+                quit=true
+                break
+                ;;
+            *)
+                echo "    Error: Invalid option, please choose again"
+                input=""
+                ;;
+        esac
+    done
+    [[ "$quit" == true ]] && break
+done 3<&0 <<< "$processes"
+

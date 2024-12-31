@@ -1,0 +1,113 @@
+#!/u/chehuang/bin/bash
+
+# shellcheck disable=SC1091
+source "$MODULESHOME/init/zsh"
+
+# Forward X11
+export __X11_SERVER="us01odcvde01611"
+if [[ "$(hostname)" != "$__X11_SERVER" && "$(hostname)" != *lava* ]]; then
+    __DISPLAY="${__X11_SERVER}:1" && export DISPLAY="$__DISPLAY"
+fi
+
+# perforce settings
+export P4USER=chehuang
+export P4PORT=p4p-us01:1777
+export P4CONFIG=.p4config
+export P4IGNORE=$HOME/.p4ignore
+if source disguise_vscode_src 2> /dev/null; then
+    export P4EDITOR="code --wait"
+    export P4DIFF="code --wait -d"
+    export P4MERGE="code_merge_sh"
+fi
+
+# shortcuts (folders)
+export workdir="/slowfs/sandwork/chehuang"
+export productdir="/remote/swefs1/PE/products/cktsim"
+
+# ***************************************************************
+# ********************* PrimeWave settings **********************
+# ***************************************************************
+
+## **************************************************************
+## **************** Analog Circuit Optimization *****************
+## **************************************************************
+export saOptimizerOMPNumThreads=0
+export saOptimizerEnableKeepDesignOpen=true
+export saOptimizerDisableLibraryLocking=true
+export saOptimizerBatchSize=4
+export saOptimizerInitialBatchSize=4
+export saDisplayOptimizerLog=true
+
+## ******************************************************
+## ************** Add $HOME/.cshrc.chehuang *************
+## ******************************************************
+export TZ=:/etc/localtime
+export CDS_LOAD_ENV CSF
+export RSU_LICENSE_MAP=/depot/pure/PurifyPlus_License_Map
+export RSU_TEMPLATE2_INI=/depot/pure/templates2.ini
+export CVSROOT=/remote/sandwork/nfs/swsernfs/CVS/cvsroot
+#export SQA_ROOT=/remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/clientstore/cktsim_u2023.03_sp2_rel/unit_pw
+
+# License
+export SNPSLMD_LICENSE_FILE=27000@shsolx02:27000@rhas150:26585@us01-dglic2:26585@us01-dglic3:26585@us01-dglic1:26585@rhas220:26585@rhas220:26585@us01swelmd2:26585@us01swelmd3:26585@us01swelmd1:26585@us01snpslmd8:26585@us01snpslmd7:26585@us01testlmd:26585@us01snpslmd5:26585@us01snpslmd4:26585@us01snpslmd3:26585@us01snpslmd6
+## Temprary license files due to license server flakey
+export LM_LICENSE_FILE=26585@us01snpslmd1:26585@us01snpslmd2:26585@us01snpslmd3
+export SNPSLMD_LICENSE_FILE=$LM_LICENSE_FILE
+##
+export CDS_LIC_FILE=5280@insync_lic1:5280@insync_lic2:5290@interop3:5290@interop2:5290@interop1
+export CDS_AUTO_64BIT=ALL
+export CX_BETA=1
+
+## **************************************************
+## ************** Add $HOME/.cshrc.synmake **************
+## **************************************************
+export TARGET_ARCH=$(/remote/platforms/common/snps_arch/snps_arch -64)
+
+#alias mkolnx='export TARGET_ARCH=linux; synmake -j rhas06,rhas07,rhas15,rhas16'
+#alias mkglnx='export TARGET_ARCH=linux; synmake -j rhas06,rhas07,rhas15,rhas16 install-fulldebug'
+#alias mkplnx='export TARGET_ARCH=linux; synmake -j rhas06,rhas07,rhas15,rhas16 exec-pG'
+#alias mkoamd='export TARGET_ARCH=amd64; synmake -j rhas25,rhas36,rhas43,rhas44'
+#alias mkgamd='export TARGET_ARCH=amd64; synmake -j rhas25,rhas36,rhas43,rhas44 install-fulldebug'
+#alias mkpamd='export TARGET_ARCH=amd64; synmake -j rhas25,rhas36,rhas43,rhas44 exec-pG'
+#alias mkcln='test -d object_root/src && rm -rf object_root/src'
+
+#alias mkol="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux O"
+#alias mkgl="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux g"
+#alias mkfl="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux G"
+#alias mkpl="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux pG"
+
+#alias mkoa="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 O"
+#alias mkga="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 g"
+#alias mkfa="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 G"
+#alias mkpa="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 pG"
+
+#alias build="/remote/sandwork/nfs/swsernfs/QA/daily_build/daily_build/dx/build.sh \!*"
+
+#alias mkcln="make OSNAME=\!* clean"
+#alias mkall="make OSNAME=\!* all"
+#alias mkqt="make OSNAME=\!* qt"
+#alias mkqtc="make OSNAME=\!* qtclen"
+#alias mkdx="make OSNAME=\!* QSCA=1 dxlib"
+#alias mk4cln="make OSNAME=ES4AMD clean"
+#alias mk4all="make OSNAME=ES4AMD all"
+#alias mk4qt="make OSNAME=ES4AMD qt"
+#alias mk4qcl="make OSNAME=ES4AMD qtclean"
+#alias mk4dx="make OSNAME=ES4AMD QSCA=1 dxlib"
+#alias mk4sw="make OSNAME=ES4AMD clean; make OSNAME=ES4AMD QCSA=1 swiglib; rm -rf /remote/sandwork/nfs/swsernfs/QA/daily_build/build_swlib/ES4AMD; cp -r /remote/sandwork/nfs/swsernfs/QA/daily_build/sx_main/sandwork/sxsrc/exp/dxlib/ES4AMD /remote/sandwork/nfs/swsernfs/QA/daily_build/build_swlib/ES4AMD"
+
+## **************************************************
+## ************** End $HOME/.cshrc.synmake **************
+## **************************************************
+
+# CC
+export CD_HOME=/u/cdmgr/clientstore/cd_main_us01
+export TARGET_ARCH=linux64
+#alias set_env="source $CD_HOME/build_tools/bin/set_env.tcsh build_tools=$CD_HOME/build_tools"
+#alias set_env_g="set_env --flavor=-g --arch=linux64"
+#alias set_env_d="set_env --flavor=-d --arch=linux64"
+#alias set_env_o="set_env --flavor=-optimize --arch=liux64"
+
+# Shortcut
+alias cleanjobs="rm -f \$HOME/.cdesigner_jobs.xml"
+alias coverity_local="/remote/port4/PEtools/coverity/desktop/coverity_desktop.pl"
+

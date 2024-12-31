@@ -1,0 +1,62 @@
+#!/u/chehuang/bin/bash
+help="Usage: sync_case_sh [OPTION]... <CASE_PATH>
+Help sync case to client
+options:
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+case_path=""
+verbose=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            [[ -n $case_path ]] && { echo "Error: Can't specify multiple paths"; exit 1; }
+            case_path=$1; shift
+            ;;
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "case_path=$case_path; verbose=$verbose" >&2
+
+[[ -n "$(command -v map_depot_path_sh)" ]] || { echo "Error: Can't find command 'map_depot_path_sh'" ; exit 1; }
+depot_path=$(map_depot_path_sh -m qa "$case_path") || { echo "Error: Can't find case in depot" ; exit 1; }
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "depot_path=$depot_path" >&2
+
+client_name=$(p4 -z tag -F %clientName% info)
+[[ "$client_name" == "none" ]] && { echo "Error: Missing p4 client name"; exit 1; }
+
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "client_name=$client_name" >&2
+client_case_path="//${client_name}/qa/${depot_path#*/qa/}"
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "client_case_path=$client_case_path" >&2
+
+spec_text="\t${depot_path}/... ${client_case_path}/..."
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "spec_text=$spec_text" >&2
+
+client_root=$(p4 -z tag -F %clientRoot% info)
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "client_root=$client_root" >&2
+
+client_file="$client_root/.p4client.tmp"
+p4 client -o > "$client_file"
+rg -q "$spec_text" "$client_file"
+is_exists=$?
+if [[ $is_exists -eq 1 ]]; then
+    echo -e "$spec_text" >> "$client_file"
+fi
+p4 client -i < "$client_file"
+
+if [[ $is_exists -eq 1 ]]; then
+    local_case_path=${client_root}/${client_case_path#//"${client_name}"/}
+    utils::verbose --msg-color "${BGREEN}" --prompt "* " "p4 sync ${client_case_path}/..." >&2
+    p4 sync "${local_case_path}/..."
+fi
+

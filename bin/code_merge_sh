@@ -1,0 +1,10 @@
+#!/u/chehuang/bin/bash
+
+if [[ -n "$VSCODE_IPC_HOOK_CLI" ]]; then
+	REMOTE_CLI="$(which -a code | rg /remote-cli/)"
+	if [[ -n "$REMOTE_CLI" ]]; then
+		"$REMOTE_CLI" --wait -m "$3" "$2" "$1" "$4"
+		exit $?
+	fi
+fi
+
