@@ -1,0 +1,57 @@
+#!/home/noreason/bin/bash
+source /remote/cad-rep/etc/.bashrc
+module load ude-wrapper
+
+export OSTYPE=linux
+export P4PORT=p4p-us01:1999
+
+root_dir="$(realpath "$1")"
+source_file="$root_dir/source_me"
+
+#original_source_file="/remote/cad-rep/msip/ude_conf/CSO/sourceme"
+global_source_file="$HOME/cd_lib/source_me"
+if [[ ! -f "$source_file" ]]; then
+    echo "cp $global_source_file $source_file" >&2
+    cp "$global_source_file" "$source_file"
+fi
+
+custom_dir="$root_dir/synopsys_custom"
+if [[ ! -d "$custom_dir" ]]; then
+    echo "mkdir -p $custom_dir" >&2
+    mkdir -p "$custom_dir"
+fi
+if ! grep -q -E "^setenv SYNOPSYS_CUSTOM_LOCAL .+" "$source_file"; then
+    echo "append \"setenv SYNOPSYS_CUSTOM_LOCAL $custom_dir\" to $source_file" >&2
+    echo "setenv SYNOPSYS_CUSTOM_LOCAL $custom_dir" >> "$source_file"
+fi
+
+echo "Running ude..." >&2
+ude_log_file="$root_dir/.ude.log"
+ude3 -s "$source_file" --command "source /remote/cad-rep/msip/ude_conf/CSO/run.tcl" > "$ude_log_file" 2>&1
+
+grep -q "error status" <<< "$(tail -n 1 "$ude_log_file")" && { echo "Error: Fail to launch ude, refer to log file for detailed message" >&2 ; exit 1; }
+
+[[ -z "$(command -v validate_link_sh)" ]] && { echo "Error: Missing validate_link_sh, get this script from /home/noreason/bin" >&2 ; exit 1; }
+
+case_folder="$(dirname "$(rg "^$HOME/cd_lib/.+/.cdesigner.tcl = \w+$" "$ude_log_file" | cut -d " " -f 1)")"
+
+lib_def_path="$root_dir/lib.defs"
+case_lib_def_path="$case_folder/lib.defs"
+if ! validate_link_sh "$lib_def_path" || [[ "$(readlink "$lib_def_path")" != "$case_lib_def_path" ]]; then
+    echo "ln -sf \"$case_lib_def_path\" \"$lib_def_path\"" >&2
+    ln -sf "$case_lib_def_path" "$lib_def_path"
+fi
+
+sim_folder="$root_dir/simulation"
+if [[ ! -d "$sim_folder" ]]; then
+    echo "mkdir \"$sim_folder\"" >&2
+    mkdir "$sim_folder"
+fi
+case_sim_folder="$case_folder/simulation"
+if [[ ! -e "$case_sim_folder" || -L "$case_sim_folder" ]]; then
+    echo "ln -sf \"$sim_folder\" \"$case_sim_folder\"" >&2
+    ln -sf "$sim_folder" "$case_sim_folder"
+fi
+
+echo "ude init done" >&2
+

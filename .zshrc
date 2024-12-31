@@ -99,7 +99,7 @@ COMPLETION_WAITING_DOTS="true"
 plugins=(alias-finder colored-man-pages colorize fzf-tab zsh-autosuggestions zsh-completions zsh-syntax-highlighting)
 ## plugins unusable: thefuck, sudo
 
-fpath+=~/.zfunc
+# fpath+=~/.zfunc
 
 # ***************************************************************
 # ******************* zsh user configurations *******************
@@ -184,83 +184,19 @@ bindkey \^u backward-kill-line
 # Make wildcard(*) consider hidden files
 setopt GLOB_DOTS
 
+# In oh-my-zsh lib/completion.zsh do WORDCHARS=''
+# Default='*?_-.[]~=/&;!#$%^(){}<>'
+WORDCHARS='*?_-.[]~&;!#$%^(){}<>|' # add '|', remove '/', '='
+
 # Make the prompt texts from zsh-autosuggestions darker
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#6a6a6a"
 
-function fg () {
-    if [[ $# -eq 1 && $1 = - ]]; then
-        builtin fg %-
-    else
-        builtin fg %"$@"
-    fi
-}
-
-function bg () {
-    if [[ $# -eq 1 && $1 = - ]]; then
-        builtin bg %-
-    else
-        builtin bg %"$@"
-    fi
-}
-
-function h () {
-    if [[ $# -eq 1 ]]; then
-        if [[ $1 -ge 0 ]]; then
-            history -"$@"
-        else
-            history -"$((-1 * $1))"
-        fi
-    elif [[ $# -eq 0 ]]; then
-        history -"$((LINES - 1))"
-    fi
-}
-
-function __has_rg () {
-    [[ -n $(command -v rg) ]] && echo 1
-}
-
-function psaux () {
-    if [[ $# -ne 1 ]]; then
-        echo "Can not accept multiple command"
-    else
-        grep="grep"
-        [[ $(__has_rg) -eq 1 ]] && grep="rg"
-        ps aux | $grep --color=always $1 | $grep -v $grep
-    fi
-}
+# source utils functions
+source "$HOME/.zsh/utils"
 
 # ***************************************************************
 # ************************ bash settings ************************
 # ***************************************************************
-
-# !!!!! Should be handled by the repeat remove in the last !!!!!
-# A function which can automatically check if a path is contained in specific
-# variable
-# If you want to add "$HOME/.local/bin" to PATH, and the delimiter of PATH is ":"
-#     check_before_append "PATH" "$HOME/.local/bin" ":"
-#function check_before_append () {
-#    # Export environment variable if it's not set
-#    if [[ -z $(eval "echo \$$1") ]]; then
-#        eval "export $1=$2"
-#        return
-#    fi
-#
-#    # Replace ' ' to '_', and split paths by ':'
-#    env_without_space=($(eval "echo \$$1" | tr " " "_" | tr "$3" "\n"))
-#    # Replace ' ' to '_', thus makes it easier to compare to env_without_space
-#    param_without_space=$(echo $2 | tr " " "_")
-#    # Set flag if there is elements in env_without_space matches param_without_space
-#    for i in ${env_without_space[@]}; do
-#        if [[ ${i} == ${param_without_space} ]]; then
-#            is_contained="true"
-#        fi
-#    done
-#
-#    # Export environment variable if the flag is not set
-#    if [[ -z ${is_contained} ]]; then
-#        eval "export $1=$2$3\${$1}"
-#    fi
-#}
 
 # setting DISPLAY to enable GUI function, mainly used for using opencv to create window
 # however make vim hang
@@ -274,6 +210,9 @@ export INPUTRC=$HOME/.inputrc
 export COLUMNS=`tput cols`
 export LINES=`tput lines`
 
+# use bat to show syntax highlighted man page
+[[ -n "$(command -v bat)" ]] && export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+
 # more self-defined aliases
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 alias ls='ls --color=auto -CF'
@@ -282,21 +221,24 @@ alias la='ls --color=auto -ACF'
 alias ll='ls --color=auto -aClFh'
 alias grep='grep --color=auto'
 # alias h='history -$((LINES - 1))' history for bash ver.
-alias duh='du -h -d 1'
+alias duh='du -h'
 alias dfh='df -h'
 alias k9='kill -9'
 alias cl='clear;clear'
 alias tree='tree -C'
 alias time='/usr/bin/time'
 alias vimdiff='vim -d'
-alias g++17='g++ -std=c++17 -o'
-alias g++17g='g++ -std=c++17 -g -o'
 alias aptupgrade='sudo apt update; sudo apt upgrade; sudo apt autoremove'
 alias locate="locate -d $HOME/.locate.db"
 
+# Fix the man for zsh built-in command target to bash's man page
+#unalias run-help
+autoload -Uz run-help
+alias man='run-help' # not sure why MANPATH works for run-help
+
 # env setting for gcc & g++ compiler
-export CC=/usr/local/bin/gcc
-export CXX=/usr/local/bin/g++
+#export CC=/usr/local/bin/gcc
+#export CXX=/usr/local/bin/g++
 
 # env setting for library & dynamic library path
 #check_before_append "LD_LIBRARY_PATH" "$HOME/lib" ":"
@@ -318,9 +260,6 @@ export CXX=/usr/local/bin/g++
 # added by Anaconda3 installer
 #check_before_append "PATH" "/usr/local/anaconda3" ":"
 
-# Check tpm existance
-[[ -d $HOME/.tmux/plugins/tpm ]] || git clone https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
-
 # env setting for CSDK
 #export CMAKE_PREFIX_PATH=CSDK
 
@@ -338,110 +277,8 @@ export CXX=/usr/local/bin/g++
 # add directory of paftools.js into PATH
 #check_before_append "PATH" "$HOME/minimap2/misc" ":"
 
-# Check eza existance
-eza_comp_folder="$HOME/.config/eza/completions/zsh"
-if [[ -z $(command -v eza) ]]; then
-    # Install binary
-    wget https://github.com/eza-community/eza/releases/download/v0.16.1/eza_x86_64-unknown-linux-musl.tar.gz
-    tar xf eza_x86_64-unknown-linux-musl.tar.gz
-    mv eza $HOME/bin/eza
-    rm eza_x86_64-unknown-linux-musl.tar.gz
-
-    # Install completion
-    wget https://raw.githubusercontent.com/eza-community/eza/main/completions/zsh/_eza
-    mkdir -p $eza_comp_folder
-    mv _eza $eza_comp_folder/
-fi
-#check_before_append "FPATH" "$eza_comp_folder" ":"
-export FPATH=$eza_comp_folder:$FPATH
-
-# Check rg existance
-rg_comp_folder="$HOME/.config/rg/complete"
-if [[ $(__has_rg) -ne 1 ]]; then
-    wget https://github.com/BurntSushi/ripgrep/releases/download/14.0.3/ripgrep-14.0.3-x86_64-unknown-linux-musl.tar.gz
-    tar xf ripgrep-14.0.3-x86_64-unknown-linux-musl.tar.gz
-    rm ripgrep-14.0.3-x86_64-unknown-linux-musl.tar.gz
-    # Install binary
-    mv ripgrep-14.0.3-x86_64-unknown-linux-musl/rg $HOME/bin/rg
-    # Install completion
-    mkdir -p $rg_comp_folder
-    mv ripgrep-14.0.3-x86_64-unknown-linux-musl/complete/* $rg_comp_folder
-    # Install man
-    mv ripgrep-14.0.3-x86_64-unknown-linux-musl/doc/rg.1 $CUSTOM_MANPATH/man1/
-
-    rm -r ripgrep-14.0.3-x86_64-unknown-linux-musl
-fi
-#check_before_append "FPATH" "$rg_comp_folder" ":"
-export FPATH=$rg_comp_folder:$FPATH
-
-# Check fd existance
-fd_comp_folder="$HOME/.config/fd/autocomplete"
-if [[ -z $(fd --version | cut -d " " -f 1) ]]; then
-    wget https://github.com/sharkdp/fd/releases/download/v8.7.1/fd-v8.7.1-x86_64-unknown-linux-gnu.tar.gz
-    tar xf fd-v8.7.1-x86_64-unknown-linux-gnu.tar.gz
-    rm fd-v8.7.1-x86_64-unknown-linux-gnu.tar.gz
-    # Install binary
-    mv fd-v8.7.1-x86_64-unknown-linux-gnu/fd $HOME/bin/fd
-    # Install completion
-    mkdir -p $fd_comp_folder
-    mv fd-v8.7.1-x86_64-unknown-linux-gnu/autocomplete/* $fd_comp_folder
-    # Install man
-    mv fd-v8.7.1-x86_64-unknown-linux-gnu/fd.1 $CUSTOM_MANPATH/man1/
-
-    rm -r fd-v8.7.1-x86_64-unknown-linux-gnu
-fi
-#check_before_append "FPATH" "$fd_comp_folder" ":"
-export FPATH=$fd_comp_folder:$FPATH
-
-# Check fzf existance
-if [[ ! -d $HOME/.fzf ]]; then
-    git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf
-    # Install binary
-    $HOME/.fzf/install --all --xdg
-    # Install man
-    cp $HOME/.fzf/man/man1/* $CUSTOM_MANPATH/man1/
-fi
-
-# env setting for fzf
-[ -f "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh ] && source "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh
-# Use ~~ as the trigger sequence instead of the default **
-export FZF_COMPLETION_TRIGGER='~~'
-# fzf's command
-export FZF_DEFAULT_COMMAND="fd --hidden --exclude '.git' --exclude 'node_modules'"
-# CTRL-T's command
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND --type f"
-# ALT-C's command
-export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND --type d"
-# Rebind Ctrl-T to Alt-T
-bindkey -M emacs -r "^T"
-bindkey -M vicmd -r "^T"
-bindkey -M viins -r "^T"
-bindkey -M emacs '\et' fzf-file-widget
-bindkey -M vicmd '\et' fzf-file-widget
-bindkey -M viins '\et' fzf-file-widget
-# Specify the root of Ctrl-T and Alt-C
-# for more info see fzf/shell/completion.zsh
-_fzf_compgen_path() {
-    fd . "$1"
-}
-_fzf_compgen_dir() {
-    fd --type d . "$1"
-}
-
-# Check fzf-tab existance
-[[ -d ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab ]] || git clone https://github.com/Aloxaf/fzf-tab ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab
-zstyle ":fzf-tab:*" fzf-flags --height=40% --layout=reverse --border --color "--color=dark,fg:-1,bg:-1,hl:#c678dd,fg+:#ffffff,bg+:#4b5263,hl+:#d858fe,info:#98c379,prompt:#61afef,pointer:#be5046,marker:#e5c07b,spinner:#61afef,header:#61afef"
-zstyle ':fzf-tab:complete:*:*' fzf-preview 'less ${(Q)realpath}'
-# preview directory's content with eza when completing cd
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -l --color=always $realpath'
-
-# thefuck configure alias
-#eval $(thefuck --alias)
-
-# Install zlua
-[[ -d $ZSH_CUSTOM/plugins/zlua ]] || git clone https://github.com/skywind3000/z.lua $ZSH_CUSTOM/plugins/zlua
-eval "$(lua $HOME/.oh-my-zsh/custom/plugins/zlua/z.lua --init zsh enhanced)"
-export _ZL_FZF_FLAG="+s -e +i"
+# source 3rd-party tools
+source "$HOME/.zsh/.zshrc.3rd_party"
 
 # Source cargo
 source "$HOME/.cargo/env"
@@ -449,9 +286,18 @@ source "$HOME/.cargo/env"
 # *************************************************************
 # **************** Remove duplicate definition ****************
 # *************************************************************
-export PATH=$(echo $PATH | tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
-export FPATH=$(echo $FPATH | tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
-export MANPATH=$(echo $MANPATH| tr ":" "\n" | tac | awk '!seen[$0]++' | tac | xargs | tr " " ":")
+export PATH=$(remove_dup_sh -d ":" $PATH)
+export FPATH=$(remove_dup_sh -d ":" $FPATH)
+export MANPATH=$(remove_dup_sh -d ":" $MANPATH)
 
+# *************************************************************
+# ****************** ZSH Completion settings ******************
+# *************************************************************
+export ZDOTDIR="$HOME/.zcompdump"
 
-autoload -Uz compinit && compinit # Load completions
+# Load completions
+autoload -Uz compinit
+for dump in $ZDOTDIR/.zcompdump(N.mh+24); do
+    compinit
+done
+compinit -C

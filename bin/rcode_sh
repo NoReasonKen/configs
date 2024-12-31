@@ -1,0 +1,13 @@
+#!/home/noreason/bin/bash
+
+rcode() {
+    client=$(cut -d ' ' -f 1 <<< "$SSH_CONNECTION")
+    server=$(cut -d ' ' -f 3 <<< "$SSH_CONNECTION")
+	echo "$client"
+	echo "$server"
+    for proj in "$@"; do
+        proj=$(realpath "$proj")
+        echo "ssh \"$client\" code --folder-uri \"vscode-remote://ssh-remote+$server$proj\""
+        ssh "$client" code --folder-uri "vscode-remote://ssh-remote+$server$proj"
+    done
+}

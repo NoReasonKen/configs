@@ -1,0 +1,40 @@
+#!/home/noreason/bin/bash
+
+help="Usage: validate_link_sh [OPTION]... [FILE]
+Check if file is a valid link, return code 0 for yes, 1 for no
+options:
+    -v, --verbose   Show verbose messages in console
+    -h, --help      Display this help and exit
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+filename=""
+verbose=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            if [[ -n "$filename" ]]; then
+                echo "Error: Multiple files are not allowed"
+                exit 1
+            fi
+            filename="$1"; shift
+            ;;
+    esac
+done
+
+utils::verbose --msg-color "${CYAN}" "filename=$filename" >&2
+
+if [[ -L "$filename" && -e "$filename" ]]; then
+    exit 0
+else
+    exit 1
+fi
+
