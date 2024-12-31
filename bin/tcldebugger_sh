@@ -1,0 +1,9 @@
+#!/home/noreason/bin/bash
+help="
+lappend auto_path /depot/TclDevKit-5.4/lib
+package require tcldebugger_attach
+debugger_init $(hostname) 2576
+"
+
+echo "$help"
+exec /depot/TclDevKit-5.4/bin/tcldebugger

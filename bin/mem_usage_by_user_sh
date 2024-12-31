@@ -1,0 +1,113 @@
+#!/home/noreason/bin/bash
+
+help="
+Usage: mem_usage_by_user_sh [OPTION]...
+Statistic memory usage for each user
+options:
+    -c, --column=N      Sort column N [Default=1]
+                        (1:user, 2:rmem, 3:vmem)
+    -r, --reverse       Reverse order of sorted column
+    -u, --user          Highlight specified user
+    -l, --logged        Filter by logged user only
+    -v, --verbose       Show verbose messages in console
+    -h, --help          Display this help and exit
+
+Output example:
+user∧       rmem(GB)     vmem(GB)
+user_1      1.6869      2.096
+user_2      1.887       1.8943
+"
+
+# shellcheck source-path=SCRIPTDIR
+source "utils_sh"
+
+sort_col=1
+is_reverse=false
+user=""
+only_logged=false
+verbose=false
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		-c|--column)
+            if [[ $# -ge 2 ]]; then
+                shift
+                [[ $1 -lt 1 || $1 -gt 3 ]] && { echo "Error: Invalid column, should be 1~3"; exit 1; }
+                sort_col=$1; shift
+            else
+                echo "-c|--column need an argument" && exit 1
+            fi
+			;;
+        -r|--reverse)
+            is_reverse=true; shift
+            ;;
+        -u|--user)
+            shift; user=$1; shift
+            ;;
+        -l|--logged)
+            only_logged=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+		*)
+            echo "Error: Unknown argument '$1'" && exit 1
+			;;
+	esac
+done
+
+utils::verbose --msg-color "${CYAN}" "column=$sort_col; reverse=$is_reverse; user=$user; logged=$only_logged" >&2
+
+if [[ "$only_logged" == true ]]; then
+    users="$(users | tr ' ' '\n' | sort -u)"
+else
+    users="$(ps -e -o user | tail -n +2 | sort -u)"
+fi
+
+sort_sign="∧"
+[[ "$is_reverse" == true ]] && sort_sign="∨"
+
+user_col="User"
+real_mem_col="rmem(GB)"
+virtual_mem_col="vmem(GB)"
+case $sort_col in
+    1)
+        user_col="${user_col}${sort_sign}"
+        sort_str="$user_col"
+        ;;
+    2)
+        real_mem_col="${real_mem_col}${sort_sign}"
+        sort_str="$real_mem_col"
+        ;;
+    3)
+        virtual_mem_col="${virtual_mem_col}${sort_sign}"
+        sort_str="$virtual_mem_col"
+        ;;
+esac
+
+header="$user_col $real_mem_col $virtual_mem_col"
+statistic_data=$(
+    for _user in $users ; do
+        echo "$_user" "$(ps -U "$_user" --no-headers -o rss,vsz \
+        | awk '{rmem+=$1; vmem+=$2} END{print rmem/1024/1024" "vmem/1024/1024}')"
+    done
+)
+
+if [[ "$is_reverse" == true ]]; then
+    is_reverse="-r"
+else
+    is_reverse=""
+fi
+table="$(column -t <<< "$header"$'\n'"$(sort -g $is_reverse -k "$sort_col" <<< "$statistic_data")")"
+
+header="$(sed -n '1p' <<< "$table")"
+table="$(sed -n '2,$p' <<< "$table")"
+
+# shellcheck source-path=SCRIPTDIR
+source "color_sh"
+echo -e "${header//${sort_str}/${BIRED}${sort_str}${NC}}"
+echo -e "${table//${user}/${BIRED}${user}${NC}}"
+
