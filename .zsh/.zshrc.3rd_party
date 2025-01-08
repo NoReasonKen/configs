@@ -1,0 +1,134 @@
+#!/u/chehuang/bin/bash
+
+export TPM_DIR="$HOME/.tmux/plugins/tpm"
+
+export EZA_VERSION="0.19.0"
+export EZA_COMP_DIR="$HOME/.config/eza/completions/zsh"
+
+export BAT_VERSION="0.24.0"
+export BAT_COMP_DIR="$HOME/.config/bat/autocomplete"
+
+export RIPGREP_VERSION="14.1.0"
+export RIPGREP_COMP_DIR="$HOME/.config/rg/complete"
+
+export FD_VERSION="9.0.0"
+export FD_COMP_DIR="$HOME/.config/fd/autocomplete"
+
+export FZF_DIR="$HOME/.fzf"
+export FZF_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/fzf"
+
+export FZF_TAB_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab"
+
+export ZLUA_DIR="$ZSH_CUSTOM/plugins/zlua"
+
+export PATCH_ELF_VERSION="0.18.0"
+
+re_is_number='^[0-9]+$'
+less_version="$(less --version | head -n 1 | cut -d " " -f 2)"
+if [[ "$less_version" =~ $re_is_number && "$less_version" -gt 549 ]]; then
+    export LESS="-RMn --mouse --wheel-lines=5"
+fi
+
+source "$(dirname "$0")"/utils/install_3rd_party_sh
+#---------------------------------------------------------------------------
+utils::install_tpm
+
+utils::install_eza
+# eza color setting (https://github.com/eza-community/eza/blob/main/man/eza_colors.5.md)
+export EZA_COLORS="uu=38;5;161:gu=38;5;208:uR=38;5;161;3:gR=38;5;208;3:un=38;5;161;4:gn=38;5;208;4:da=38;5;165"
+
+utils::install_bat
+export BAT_CONFIG_PATH="$HOME/.config/bat/config"
+
+utils::install_rg
+
+utils::install_fd
+
+utils::install_fzf
+# fzf setting
+# shellcheck disable=SC1091
+[ -f "$FZF_CONFIG_DIR/fzf.zsh" ] && source "$FZF_CONFIG_DIR/fzf.zsh"
+# Use ~~ as the trigger sequence instead of the default **
+export FZF_COMPLETION_TRIGGER='~~'
+# fzf's command
+export FZF_DEFAULT_COMMAND="fd --hidden --exclude '.git' --exclude 'node_modules'"
+# CTRL-T's command
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND --type f"
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat --theme TwoDark -f {}'
+  --bind 'ctrl-/:change-preview-window(hidden|)'"
+# ALT-C's command
+export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND --type d"
+export FZF_ALT_C_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'tree -C {}'
+  --bind 'ctrl-/:change-preview-window(hidden|)'"
+# Rebind Ctrl-T to Alt-T
+bindkey -M emacs -r "^T"
+bindkey -M vicmd -r "^T"
+bindkey -M viins -r "^T"
+bindkey -M emacs '\et' fzf-file-widget
+bindkey -M vicmd '\et' fzf-file-widget
+bindkey -M viins '\et' fzf-file-widget
+# Specify the root of Ctrl-T and Alt-C
+# for more info see fzf/shell/completion.zsh
+_fzf_compgen_path() {
+    fd . "$1"
+}
+_fzf_compgen_dir() {
+    fd --type d . "$1"
+}
+# fzf setting end
+
+utils::install_fzf_tab
+# fzf-tab setting
+_args=(
+    --height=40%
+    --layout=reverse
+    --border
+    --color '--color=dark,fg:-1,bg:-1,hl:#c678dd,fg+:#ffffff,bg+:#4b5263,hl+:#d858fe,info:#98c379,prompt:#61afef,pointer:#be5046,marker:#e5c07b,spinner:#61afef,header:#61afef'
+    --bind 'ctrl-/:change-preview-window(50%,wrap|0%|70%,nowrap|70%,wrap|50%,nowrap)'  # use 0% instead of 'hidden' to prevent reload
+)
+zstyle ":fzf-tab:*" fzf-flags "${_args[@]}"
+__fzf_tab_fzf_preview_func_str() {
+    # shellcheck disable=SC2154
+    if [[ -f "$realpath" ]]; then
+        __size=$(du "$realpath" | cut -f 1)
+        __lines=$(wc -l "$realpath" | cut -d ' ' -f 1)
+        if [[ $__size -le 2048 && $__lines -le 20000 ]]; then
+            bat --theme TwoDark -f "$realpath"
+        else
+            __file_str="### File: $realpath"
+            __size_str="### Size: $__size KB"
+            if [[ ${#__file_str} -ge ${#__size_str} ]]; then
+                __size_str+="$(printf " %.0s" $(seq 1 $((${#__file_str} - ${#__size_str}))))"
+            else
+                __file_str+="$(printf " %.0s" $(seq 1 $((${#__size_str} - ${#__file_str}))))"
+            fi
+
+            printf "#%.0s" $(seq 1 ${#__file_str}); echo ""
+            __file_str+=" ###"
+            __size_str+=" ###"
+            echo "$__file_str"
+            echo "$__size_str"
+            printf "#%.0s" $(seq 1 ${#__file_str}); echo ""
+            cat "$realpath"
+        fi
+    else
+        eza -A -h -l -g --color=always --time-style=long-iso "$realpath"
+    fi
+}
+zstyle ':fzf-tab:complete:*:*' fzf-preview "$(type -f __fzf_tab_fzf_preview_func_str | head -n -1 | tail -n +2)"
+# preview directory's content with eza when completing cd
+# shellcheck disable=SC2016
+# zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -l --color=always $realpath'
+# fzf-tab setting end
+
+# utils::install_thefuck
+
+utils::install_zlua
+export _ZL_FZF_FLAG="+s -e +i"
+
+utils::install_patchelf
+
