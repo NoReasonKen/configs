@@ -26,7 +26,7 @@ export PATCH_ELF_VERSION="0.18.0"
 re_is_number='^[0-9]+$'
 less_version="$(less --version | head -n 1 | cut -d " " -f 2)"
 if [[ "$less_version" =~ $re_is_number && "$less_version" -gt 549 ]]; then
-    export LESS="-RMQ --mouse --wheel-lines=5"
+    export LESS="-RMn --mouse --wheel-lines=5"
 fi
 
 source "$(dirname "$0")"/utils/install_3rd_party_sh
@@ -91,13 +91,35 @@ _args=(
     --bind 'ctrl-/:change-preview-window(50%,wrap|0%|70%,nowrap|70%,wrap|50%,nowrap)'  # use 0% instead of 'hidden' to prevent reload
 )
 zstyle ":fzf-tab:*" fzf-flags "${_args[@]}"
-# shellcheck disable=SC2016
-zstyle ':fzf-tab:complete:*:*' fzf-preview '
-    if [[ -f $realpath ]]; then
-        bat --theme TwoDark -f $realpath
+__fzf_tab_fzf_preview_func_str() {
+    # shellcheck disable=SC2154
+    if [[ -f "$realpath" ]]; then
+        __size=$(du "$realpath" | cut -f 1)
+        __lines=$(wc -l "$realpath" | cut -d ' ' -f 1)
+        if [[ $__size -le 2048 && $__lines -le 20000 ]]; then
+            bat --theme TwoDark -f "$realpath"
+        else
+            __file_str="### File: $realpath"
+            __size_str="### Size: $__size KB"
+            if [[ ${#__file_str} -ge ${#__size_str} ]]; then
+                __size_str+="$(printf " %.0s" $(seq 1 $((${#__file_str} - ${#__size_str}))))"
+            else
+                __file_str+="$(printf " %.0s" $(seq 1 $((${#__size_str} - ${#__file_str}))))"
+            fi
+
+            printf "#%.0s" $(seq 1 ${#__file_str}); echo ""
+            __file_str+=" ###"
+            __size_str+=" ###"
+            echo "$__file_str"
+            echo "$__size_str"
+            printf "#%.0s" $(seq 1 ${#__file_str}); echo ""
+            cat "$realpath"
+        fi
     else
-        eza -A -h -l -g --color=always --time-style=long-iso $realpath
-    fi'
+        eza -A -h -l -g --color=always --time-style=long-iso "$realpath"
+    fi
+}
+zstyle ':fzf-tab:complete:*:*' fzf-preview "$(type -f __fzf_tab_fzf_preview_func_str | head -n -1 | tail -n +2)"
 # preview directory's content with eza when completing cd
 # shellcheck disable=SC2016
 # zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -l --color=always $realpath'
