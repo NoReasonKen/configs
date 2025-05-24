@@ -62,7 +62,7 @@ set listchars=tab:⇤–⇥,space:·,trail:·,precedes:⇠,extends:⇢,nbsp:×
 
 "===========================================================
 " set color scheme
-colorscheme molokai
+color molokai
 " transparant background
 hi NonText ctermbg=none
 hi Normal guibg=NONE ctermbg=NONE
@@ -88,7 +88,7 @@ Bundle 'gmarik/vundle'
 " original repos on github
 Bundle 'Lokaltog/vim-easymotion'
 Bundle 'vim-airline/vim-airline'
-Bundle 'vim-airline/vim-airline-themes'
+"Bundle 'vim-airline/vim-airline-themes'
 Bundle 'airblade/vim-gitgutter'
 Bundle 'scrooloose/nerdtree'
 "Bundle 'majutsushi/tagbar'

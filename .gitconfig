@@ -8,7 +8,7 @@
 [status]
     showUntrackedFiles = no
 [pull]
-	rebase = false
+    rebase = false
 [alias]
     b = "branch"
     co = "checkout"
