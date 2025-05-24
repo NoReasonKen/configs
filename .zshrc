@@ -15,8 +15,8 @@ if [[ -v ZSH_PROF ]]; then
     zmodload zsh/zprof
 fi
 
-# Handle backspace shows "^?" in vim
-stty erase "^?"
+# Handle backspace be mapped to "^?"
+[[ $- = *i* ]] && stty erase "^?"
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of $HOME/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
@@ -192,7 +192,7 @@ WORDCHARS='*?_-.[]~&;!#$%^(){}<>|' # add '|', remove '/', '='
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#6a6a6a"
 
 # source utils functions
-source "$HOME/.zsh/utils"
+source "$HOME/.zsh/.zshrc.utils"
 
 # ***************************************************************
 # ************************ bash settings ************************

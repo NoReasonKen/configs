@@ -1,0 +1,26 @@
+Index:
+    StandardLibrary: Yes
+Diagnostics:
+    Suppress: [attribute_wrong_number_arguments]
+    ClangTidy:
+        Add: [bugprone-*, modernize-*, performance-*, portability-*]
+        Remove:
+            [
+                bugprone-easily-swappable-parameters,
+                bugprone-sizeof-expression,
+                modernize-pass-by-value,
+                modernize-use-auto,
+                modernize-use-nodiscard,
+                modernize-use-override,
+                modernize-use-trailing-return-type,
+                performance-unnecessary-value-param,
+            ]
+        CheckOptions:
+            WarnOnFloatingPointNarrowingConversion: false
+Hover:
+    ShowAKA: true
+---
+If:
+    PathMatch: .*/clientstore/wvadv_3rd_party_depends/cc_depends/.*
+Index:
+    Background: Skip
