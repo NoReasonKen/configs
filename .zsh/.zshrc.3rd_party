@@ -1,4 +1,4 @@
-#!/u/chehuang/bin/bash
+#!/home/noreason/bin/bash
 
 export TPM_DIR="$HOME/.tmux/plugins/tpm"
 
