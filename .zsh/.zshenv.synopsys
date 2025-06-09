@@ -11,18 +11,24 @@ fi
 
 # perforce settings
 export P4USER=chehuang
-export P4PORT=p4p-us01:1777
+export P4PORT=p4p-us01:1666
 export P4CONFIG=.p4config
 export P4IGNORE=$HOME/.p4ignore
 if source disguise_vscode_src 2> /dev/null; then
     export P4EDITOR="code --wait"
     export P4DIFF="code --wait -d"
     export P4MERGE="code_merge_sh"
+else
+    export P4EDITOR="vim"
+    export P4DIFF="vim -d"
 fi
 
 # shortcuts (folders)
 export workdir="/slowfs/sandwork/chehuang"
-export productdir="/remote/swefs1/PE/products/cktsim"
+export productdir="/remote/swefs6/PE/products/cd"
+
+# github-copilot alias
+eval "$(gh copilot alias -- zsh)"
 
 # ***************************************************************
 # ********************* PrimeWave settings **********************
@@ -62,42 +68,6 @@ export CX_BETA=1
 ## ************** Add $HOME/.cshrc.synmake **************
 ## **************************************************
 export TARGET_ARCH=$(/remote/platforms/common/snps_arch/snps_arch -64)
-
-#alias mkolnx='export TARGET_ARCH=linux; synmake -j rhas06,rhas07,rhas15,rhas16'
-#alias mkglnx='export TARGET_ARCH=linux; synmake -j rhas06,rhas07,rhas15,rhas16 install-fulldebug'
-#alias mkplnx='export TARGET_ARCH=linux; synmake -j rhas06,rhas07,rhas15,rhas16 exec-pG'
-#alias mkoamd='export TARGET_ARCH=amd64; synmake -j rhas25,rhas36,rhas43,rhas44'
-#alias mkgamd='export TARGET_ARCH=amd64; synmake -j rhas25,rhas36,rhas43,rhas44 install-fulldebug'
-#alias mkpamd='export TARGET_ARCH=amd64; synmake -j rhas25,rhas36,rhas43,rhas44 exec-pG'
-#alias mkcln='test -d object_root/src && rm -rf object_root/src'
-
-#alias mkol="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux O"
-#alias mkgl="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux g"
-#alias mkfl="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux G"
-#alias mkpl="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake linux pG"
-
-#alias mkoa="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 O"
-#alias mkga="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 g"
-#alias mkfa="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 G"
-#alias mkpa="/remote/sandwork/nfs/swsernfs/QA/daily_build/jzbin/jzmake amd64 pG"
-
-#alias build="/remote/sandwork/nfs/swsernfs/QA/daily_build/daily_build/dx/build.sh \!*"
-
-#alias mkcln="make OSNAME=\!* clean"
-#alias mkall="make OSNAME=\!* all"
-#alias mkqt="make OSNAME=\!* qt"
-#alias mkqtc="make OSNAME=\!* qtclen"
-#alias mkdx="make OSNAME=\!* QSCA=1 dxlib"
-#alias mk4cln="make OSNAME=ES4AMD clean"
-#alias mk4all="make OSNAME=ES4AMD all"
-#alias mk4qt="make OSNAME=ES4AMD qt"
-#alias mk4qcl="make OSNAME=ES4AMD qtclean"
-#alias mk4dx="make OSNAME=ES4AMD QSCA=1 dxlib"
-#alias mk4sw="make OSNAME=ES4AMD clean; make OSNAME=ES4AMD QCSA=1 swiglib; rm -rf /remote/sandwork/nfs/swsernfs/QA/daily_build/build_swlib/ES4AMD; cp -r /remote/sandwork/nfs/swsernfs/QA/daily_build/sx_main/sandwork/sxsrc/exp/dxlib/ES4AMD /remote/sandwork/nfs/swsernfs/QA/daily_build/build_swlib/ES4AMD"
-
-## **************************************************
-## ************** End $HOME/.cshrc.synmake **************
-## **************************************************
 
 # CC
 export CD_HOME=/u/cdmgr/clientstore/cd_main_us01

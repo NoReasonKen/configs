@@ -9,8 +9,8 @@ options:
     -h, --help              Display this help and exit
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 delimiter=" "
 input=""
@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             if [[ -n "$input" ]]; then
-                echo "Error: Multiple inputs are not allowed"
+                utils::ERROR "Multiple inputs are not allowed\n" >&2
                 exit 1
             fi
             input="$1"; shift
@@ -36,7 +36,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "delimiter=$delimiter; input=$input" >&2
+utils::verbose -c "${CYAN}" "delimiter=$delimiter; input=$input\n"
 
 #tr "$delimiter" "\n" <<< "$input" | tac | awk '!seen[$0]++' | tac | xargs | tr " " "$delimiter"
 tr "$delimiter" "\n" <<< "$input" | awk '!seen[$0]++' | xargs | tr " " "$delimiter"
+

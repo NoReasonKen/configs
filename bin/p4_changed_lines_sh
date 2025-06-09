@@ -1,0 +1,62 @@
+#!/u/chehuang/bin/bash
+help="Usage: p4_changed_lines_sh [OPTION]... <CHANGE>
+Calculates changed line number
+options:
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+"
+
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
+
+change=""
+verbose=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            if [[ -n "$change" ]]; then
+                utils::ERROR "Can't specify more than 1 change\n" >&2
+                exit 1
+            fi
+            change=$1; shift
+            ;;
+    esac
+done
+[[ -z "$change" ]] && { utils::ERROR "Missing change\n" >&2 ; exit 1; }
+
+utils::verbose -c "${CYAN}" "change=$change; verbose=$verbose\n"
+
+client_name=$(p4 -z tag -F %clientName% info)
+if [[ "$client_name" == "none" || "$client_name" == "\*unknown\*" ]]; then
+    utils::ERROR "Missing p4 client\n" >&2
+    exit 1
+fi
+utils::verbose -c "${BGREEN}" -p "* " "client: ${NC}$client_name\n"
+
+if p4 -z tag describe "$change" |& rg -q "no such changelist"; then
+    utils::ERROR "Missing change in client\n" >&2
+    exit 1
+fi
+files="$(p4 -z tag describe "$change" | rg "depotFile" | cut -d " " -f 3 | xargs)"
+utils::verbose -c "${BGREEN}" -p "* " "change files: ${NC}$files\n"
+
+unset P4DIFF
+# shellcheck disable=SC2048
+# shellcheck disable=SC2086
+p4 -z tag -F -- diff -ds ${files[*]} | \
+    awk '/^(add|deleted|changed)/ {
+        if ($1 == "changed") {
+            sum+=($4 > $6 ? $4 : $6)
+        }
+        else {
+            sum += $4
+        }
+    }
+    END { print sum }'
+

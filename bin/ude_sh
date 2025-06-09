@@ -1,15 +1,44 @@
 #!/u/chehuang/bin/bash
+
+help="Usage: ude_sh <ROOT> [<Args for ude3>...]
+Help to initialize and run ude cases with specific settings in <ROOT>
+    e.g. ude_sh . -- --command \"source /remote/cad-rep/msip/ude_conf/CSO/run.tcl\"
+"
+
+[[ "$1" == "-h" || "$1" == "--help" ]] && { echo "$help"; exit 0; }
+
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
+
 source /remote/cad-rep/etc/.bashrc
 module load ude-wrapper
 
 export OSTYPE=linux
 export P4PORT=p4p-us01:1999
+unset XDG_RUNTIME_DIR
 
 root_dir="$(realpath "$1")"
+shift
+
 source_file="$root_dir/source_me"
+
+if [[ ! -e "$HOME/cd_lib" ]]; then
+    utils::ERROR "$HOME/cd_lib does not exist\n" >&2
+    exit 1
+fi
+if [[ ! -L "$HOME/cd_lib" ]]; then
+    utils::ERROR "$HOME/cd_lib is not a link, link this to your work directory to prevent ude" \
+        "cases occupy too much space in your home directory" >&2
+fi
 
 #original_source_file="/remote/cad-rep/msip/ude_conf/CSO/sourceme"
 global_source_file="$HOME/cd_lib/source_me"
+if [[ ! -e "$global_source_file" ]]; then
+    echo "cp /remote/cad-rep/msip/ude_conf/CSO/sourceme $global_source_file" >&2
+    cp "/remote/cad-rep/msip/ude_conf/CSO/sourceme" "$global_source_file"
+    echo "Any further project will use $global_source_file as default source file" >&2
+fi
+
 if [[ ! -f "$source_file" ]]; then
     echo "cp $global_source_file $source_file" >&2
     cp "$global_source_file" "$source_file"
@@ -22,33 +51,48 @@ if [[ ! -d "$custom_dir" ]]; then
 fi
 if ! grep -q -E "^setenv SYNOPSYS_CUSTOM_LOCAL .+" "$source_file"; then
     echo "append \"setenv SYNOPSYS_CUSTOM_LOCAL $custom_dir\" to $source_file" >&2
-    echo "setenv SYNOPSYS_CUSTOM_LOCAL $custom_dir" >> "$source_file"
+    printf "setenv SYNOPSYS_CUSTOM_LOCAL %s\n\n" "$custom_dir" >> "$source_file"
 fi
 
 echo "Running ude..." >&2
 ude_log_file="$root_dir/.ude.log"
-ude3 -s "$source_file" --command "source /remote/cad-rep/msip/ude_conf/CSO/run.tcl" > "$ude_log_file" 2>&1
+# It's normal if the message below does not quote arguments with spaces, use 'set -x' instead
+# echo " * ude3 -s \"$source_file\" $* > \"$ude_log_file\" 2>&1" >&2
+ude3 -s "$source_file" "$@" > "$ude_log_file" 2>&1
 
-grep -q "error status" <<< "$(tail -n 1 "$ude_log_file")" && { echo "Error: Fail to launch ude, refer to log file for detailed message" >&2 ; exit 1; }
+if grep -q "error status" <<< "$(tail -n 1 "$ude_log_file")"; then
+    utils::ERROR "Fail to launch ude, refer to log file for detailed message\n" >&2
+    exit 1
+fi
 
-[[ -z "$(command -v validate_link_sh)" ]] && { echo "Error: Missing validate_link_sh, get this script from /u/chehuang/bin" >&2 ; exit 1; }
+if [[ -z "$(command -v validate_link_sh)" ]]; then
+    utils::ERROR "Missing validate_link_sh, get this script from /u/chehuang/bin\n" >&2
+    exit 1
+fi
 
-case_folder="$(dirname "$(rg "^$HOME/cd_lib/.+/.cdesigner.tcl = \w+$" "$ude_log_file" | cut -d " " -f 1)")"
+rg_result="$(rg "^$HOME/cd_lib/.+/.cdesigner.tcl = \w+$" "$ude_log_file")"
+first_field="$(echo "$rg_result" | cut -d " " -f 1)"
+case_folder="$(dirname "$first_field")"
 
 lib_def_path="$root_dir/lib.defs"
 case_lib_def_path="$case_folder/lib.defs"
+if [[ ! -e "$case_lib_def_path" || ! -f "$case_lib_def_path" ]]; then
+    utils::ERROR "Invalid case folder ($case_folder)\n" >&2
+    exit 1
+fi
+
 if ! validate_link_sh "$lib_def_path" || [[ "$(readlink "$lib_def_path")" != "$case_lib_def_path" ]]; then
     echo "ln -sf \"$case_lib_def_path\" \"$lib_def_path\"" >&2
     ln -sf "$case_lib_def_path" "$lib_def_path"
 fi
 
 sim_folder="$root_dir/simulation"
+case_sim_folder="$case_folder/simulation"
 if [[ ! -d "$sim_folder" ]]; then
     echo "mkdir \"$sim_folder\"" >&2
     mkdir "$sim_folder"
 fi
-case_sim_folder="$case_folder/simulation"
-if [[ ! -e "$case_sim_folder" || -L "$case_sim_folder" ]]; then
+if ! validate_link_sh "$case_sim_folder" || [[ "$(readlink "$case_sim_folder")" != "$sim_folder" ]]; then
     echo "ln -sf \"$sim_folder\" \"$case_sim_folder\"" >&2
     ln -sf "$sim_folder" "$case_sim_folder"
 fi

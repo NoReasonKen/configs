@@ -4,12 +4,12 @@ help="Usage: get_x_display_sh [<OPTION>...] <X_SERVER>
 options:
     -u, --user <USER>   Specify another user instead of current user
     -e, --env <ENV>     Specify another env instead of 'DISPLAY'
-    -v, --verbose		Show verbose messages in console
-    -h, --help			Display this help and exit
+    -v, --verbose       Show verbose messages in console
+    -h, --help          Display this help and exit
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 xserver_name=""
 user_name="$(whoami)"
@@ -36,13 +36,13 @@ while [[ $# -gt 0 ]]; do
             if [[ -z "$xserver_name" ]]; then
                 xserver_name="$1"; shift
             else
-                echo "Error: Can't accept multiple server" >&2
+                utils::ERROR "Can't accept multiple server\n" >&2
                 exit 1
             fi
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "xserver=$xserver_name; user=$user_name; env=$env_name" >&2
+utils::verbose -c "${CYAN}" "xserver=$xserver_name; user=$user_name; env=$env_name\n" >&2
 
 # End if not a ssh connection
 [[ -z "$SSH_CLIENT" ]] && { echo "$DISPLAY"; exit 0; }
@@ -66,9 +66,11 @@ if [[ "$server_ip" == "$xserver_ip" ]]; then
 fi
 [[ "$client_ip" == "$xserver_ip" ]] && { echo "$DISPLAY"; exit 0; }
 
-tty="$(w --no-header | awk '{print $1,$2,$3}' | rg "$user_name" | rg -m 1 "$xserver_name" | awk '{print $2}')"
+tty="$(w --no-header | awk '{print $1,$2,$3}' | rg "$user_name" | rg -m 1 "$xserver_name" | \
+    awk '{print $2}')"
 if [[ -z "$tty" && "$xserver_name" != "$xserver_ip" ]]; then
-    tty="$(w --no-header | awk '{print $1,$2,$3}' | rg "$user_name" | rg -m 1 "$xserver_ip" | awk '{print $2}')"
+    tty="$(w --no-header | awk '{print $1,$2,$3}' | rg "$user_name" | rg -m 1 "$xserver_ip" | \
+        awk '{print $2}')"
 fi
 
 if [[ -n "$tty" ]]; then
@@ -78,8 +80,10 @@ if [[ -n "$tty" ]]; then
     echo "${display#"${env_name}"=}"
     exit 0
 else
-    echo "${BASH_SOURCE[*]}:${LINENO}" >&2
-    echo "  Error: Can't find your tty on $(hostname) which connect from $xserver_name, please connect to $(hostname) from $xserver_name with ssh X11 forwarding first" >&2
+    utils::verbose -f -c "${BGREEN}" -p "* " "${BASH_SOURCE[*]}:${LINENO}\n" >&2
+    utils::ERROR -p "  Error" \
+        "Can't find your tty on $(hostname) which connect from $xserver_name, please " \
+        "connect to $(hostname) from $xserver_name with ssh X11 forwarding first\n" >&2
     exit 1
 fi
 

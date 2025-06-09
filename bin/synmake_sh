@@ -1,43 +1,61 @@
 #!/u/chehuang/bin/bash
 
 help="Usage: synmake_sh <OPTION>...
-Supports short keys for usual synmake commands
+Supports short keys for usual synmake commands, only works when run in client root
 options:
     -P, --preset <ENUM>     Use preset enums. They are order irrelevant, and any explicit declared
                             params will override params in preset.
-                            S(simple)='-p S -c <Client Root>/.compile_commands.json -l .synmake.log -t'
-                            A(all)='--always-make' or '-B'
-                            D(debug)='--debug'
+                            S(simple)='-c <Client Root>/.compile_commands.json -l <Client Root>/.synmake.log'
+                            I='--install'
+                            A='--always-make' or '-B'
+                            R='--build-type release'
+                            G='--build-type debug'
+                            D='--build-type develop'
+                            P='--prebuild'
+                            p='--pack'
                             E.G. 'synmake_sh -c test.json -P SA -l test.log' ===
-                                 'synmake_sh -c test.json -l test.log -t -p V -B'
+                                 'synmake_sh -c test.json -l test.log -t -B'
     ---------------------------------------------------------------------------------
-    -d, --debug             Whether use debug build instead of release build
-    -p, --pack <MODE>       Pack packages with specific mode after build success
-                            'S|simple': Only pack primewave tcl
-                            'V|cc_ver': Pack cc version specific files additionally
-                            'A|all': Pack all
+    -m, --module <MODULE>   Specify module, can be {All, PW}
+                            [Default=All]
+    -t, --build-type        Build type
+                            'R|release': Release build
+                            'G|debug': Debug build
+                            'D|develop': Develop build [Default]
+    -P, --prebuild          Run prebuild before build (only for cc)
+    -i, --install           Build
+    -p, --pack              Pack packages after build success
     -B, --always-make       Unconditionally make all targets
     -c, --compdb <FILE>     Output compdb file name
     -l, --log <FILE>        Output log file name
-    -t, --tail              Whether tail log file after build success. The line 
-                            number is auto detected
+    -s, --summary           Whether output summary of log file after build success
     --dry-run               Only show the constructed command instead of running it
     -v, --verbose           Show verbose messages in console
     -h, --help              Display this help and exit
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
+
+MODULES=("All" "PW")
 
 preset=""
-debug=false
-pack=""
+module="All"
+build_type=""
+prebuild=false
+install=false
+pack=false
 always_make=false
 compdb=""
 log_file=""
-is_tail=false
+is_summary=false
 dry_run=false
 verbose=false
+
+if [[ "$(pwd)" != $(p4 -z tag -F %clientRoot% info) ]]; then
+    utils::ERROR "synmake_sh can only run in client root\n" >&2
+    exit 1
+fi
 
 original_args=( "$@" )
 while [[ $# -gt 0 ]]; do
@@ -54,24 +72,34 @@ done
 
 while read -rn 1 ch; do
     case $ch in
-        S|s)
-            # Fallback to absolute path if relative path starts with multiple "../"
-            _client_root="$(p4 -z tag -F %clientRoot% info)"
-            _pwd="$(pwd)"
-            _relative_path="$(realpath --relative-to "$_pwd" "$_client_root")"
-            [[ "$_relative_path" =~ \.\./\.\. ]] || _client_root="$_relative_path"
-            compdb="$_client_root/.compile_commands.json"
+        S)
+            compdb=".compile_commands.json"
             log_file=".synmake.log"
-            is_tail=true
+            is_summary=true
             ;;
-        A|a)
+        I)
+            install=true
+            ;;
+        A)
             always_make=true
             ;;
-        D|d)
-            debug=true
+        R)
+            build_type=release
+            ;;
+        G)
+            build_type=debug
+            ;;
+        D)
+            build_type=develop
+            ;;
+        P)
+            prebuild=true
+            ;;
+        p)
+            pack=true
             ;;
         *)
-            echo "Error: Invalid preset '$ch'"
+            utils::ERROR "Invalid preset '$ch'\n" >&2
             exit 1
             ;;
     esac
@@ -83,23 +111,61 @@ while [[ $# -gt 0 ]]; do
         -P|--preset)
             shift; shift
             ;;
-        -d|--debug)
-            debug=true; shift
+        -m|--module)
+            shift
+            # shellcheck disable=SC2076
+            if [[ ! " ${MODULES[@]} " =~ " $1 " ]]; then
+                utils::ERROR "Invalid module, valid modules: (${MODULES[*]})\n" >&2
+                exit 1
+            fi
+            module=$1
+            shift
+            ;;
+        -t|--build-type)
+            shift
+            case "$1" in
+                R|release|G|debug|D|develop)
+                    ;;
+                *)
+                    utils::ERROR "Invalid build type '$1'\n" >&2
+                    exit 1
+                    ;;
+            esac
+            build_type=$1
+            shift
+            ;;
+        -b|--prebuild)
+            prebuild=true; shift
+            ;;
+        -i|--install)
+            install=true; shift
             ;;
         -p|--pack)
-            shift; pack=$1; shift
+            pack=true; shift
             ;;
         -B|--always-make)
             always_make=true; shift
             ;;
         -c|--compdb)
-            shift; compdb=$1; shift
+            shift
+            if [[ -e "$1" && ! -f "$1" ]]; then
+                utils::ERROR "compdb exists and is not a file\n" >&2
+                exit 1
+            fi
+            compdb=$1
+            shift
             ;;
         -l|--log)
-            shift; log_file=$1; shift
+            shift
+            if [[ -e "$1" && ! -f "$1" ]]; then
+                utils::ERROR "log-file exists and is not a file\n" >&2
+                exit 1
+            fi
+            log_file=$1
+            shift
             ;;
-        -t|--tail)
-            is_tail=true; shift
+        -s|--summary)
+            is_summary=true; shift
             ;;
         --dry-run)
             dry_run=true; shift
@@ -111,175 +177,175 @@ while [[ $# -gt 0 ]]; do
             echo "$help" && exit 0
             ;;
         *)
-            echo "Error: Unknow parameter '$1'"
+            utils::ERROR "Unknown parameter '$1'\n" >&2
             exit 1
             ;;
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "debug=$debug; pack=$pack; always-make=$always_make; compdb=$compdb; log=$log_file; tail=$is_tail" >&2
+if [[ "$module" != "All" ]]; then
+    compdb=""
+    utils::verbose -c "${BRED}" -p "* " "Ignore parameter '-compdb' because it only build specific" \
+        "module\n"
+fi
+
+case "$build_type" in
+    R|release)
+        build_type="r"
+        ;;
+    G|debug)
+        build_type="g"
+        compdb=""
+        utils::verbose -c "${BRED}" -p "* " \
+            "Ignore parameter '-compdb' because it's a debug build\n"
+        ;;
+    ""|D|develop)
+        build_type="d"
+        ;;
+esac
+[[ -n "$log_file" ]] && log_file="${log_file%.*}.${build_type}.${log_file##*.}"
+
+utils::verbose -c "${CYAN}" \
+    "module=$module; build-type=$build_type; prebuild=$prebuild; install=$install; pack=$pack; " \
+    "always-make=$always_make; compdb=$compdb; log=$log_file; summary=$is_summary\n"
 
 client_name="$(p4 -z tag -F %clientName% info)"
-[[ "$client_name" == "none" || "$client_name" == "\*unknown\*" ]] && { echo "Error: Missing P4 Client"; exit 1; }
+if [[ "$client_name" == "none" || "$client_name" == "\*unknown\*" ]]; then
+    utils::ERROR "Missing P4 Client\n" >&2
+    exit 1
+fi
+
+client_root="$(p4 -z tag -F %clientRoot% info)"
 
 #--------------------
-# build command
-build_cmd=""
+# prebuild
+prebuild_cmd=""
+if [[ "$prebuild" == true ]]; then
+    if [[ "$module" != "PW" ]]; then
+        if [[ -n "$log_file" ]]; then
+            prebuild_cmd=" -log \"${log_file%.*}.prebuild.${log_file##*.}\""
+        fi
+        prebuild_cmd="synmake$prebuild_cmd prebuild"
 
-if [[ "$always_make" == true ]]; then
-    build_cmd="$build_cmd -B"
-fi
-
-if [[ -n "$compdb" ]]; then
-    build_cmd="$build_cmd -compdb \"$compdb\""
-fi
-
-if [[ -n "$log_file" ]]; then
-    build_cmd="$build_cmd -log \"$log_file\""
-fi
-
-if [[ -n "$build_cmd" || "$is_tail" == true ]]; then
-    if [[ "$debug" == false ]]; then
-        build_cmd="synmake$build_cmd install"
+        utils::verbose -f -c "${BGREEN}" -p "* " "Prebuilding ...\n"
+        utils::verbose "  $prebuild_cmd\n"
+        if [[ "$dry_run" == false ]]; then
+            if bash -c "$prebuild_cmd"; then
+                utils::verbose -f -c "${CYAN}" "  [$(date +"%Y-%m-%d %H:%M:%S")]\n"
+            else
+                utils::ERROR "Prebuild fail\n" >&2
+                exit 1
+            fi
+        fi
     else
-        build_cmd="synmake$build_cmd install-g"
+        utils::WARNING "Can't apply prebuild to module 'PW', ignore\n" >&2
+    fi
+fi
+
+#--------------------
+# build
+build_cmd=""
+build_status=0
+
+if [[ "$install" == true ]]; then
+    build_options=""
+    if [[ "$module" == "PW" ]]; then
+        [[ ! -d primewave ]] && { utils::ERROR "Missing 'primewave' folder\n" >&2; exit 1; }
+        build_options+=" -C primewave"
     fi
 
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "build command:" >&2
-    utils::verbose "  $build_cmd" >&2
+    if [[ "$always_make" == true ]]; then
+        build_options+=" -B"
+    fi
+
+    if [[ -n "$compdb" ]]; then
+        build_options+=" -compdb \"$(utils::get_relative_path -d 2 "$(pwd)" "$compdb")\""
+    fi
+
+    if [[ -n "$log_file" ]]; then
+        build_options+=" -log \"$(utils::get_relative_path -d 2 "$(pwd)" "$log_file")\""
+    fi
+
+    build_cmd+="synmake$build_options install"
+    case "$build_type" in
+        g|d)
+            build_cmd+="-$build_type"
+            ;;
+    esac
+
+    utils::verbose -f -c "${BGREEN}" -p "* " "Building ...\n"
+    utils::verbose "  $build_cmd\n"
+    if [[ "$dry_run" == false ]]; then
+        bash -c "$build_cmd"
+        build_status=$?
+
+        # Overwrite compile_commands.json if it's fully build
+        status_code=$?
+        if [[ "$always_make" == true && "$status_code" == 0 ]] ; then
+            if [[ "$build_type" != "g" ]]; then
+                [[ -n "$compdb" && -e "$compdb" ]] && cp "$compdb" "$client_root/compile_commands.json"
+                # Our make file set some of compile variable with escape on double quote which is
+                #   meaningless and make clangd can't parse macro 'ASSERT_RETURN' correctly
+                # Here replace \\\"VALUE\\\" to \"VALUE\"
+                sed -i 's|\\\\\\"|\\"|g' "$client_root/compile_commands.json"
+            fi
+        fi
+
+        # Remove .smk_compdb_* because it makes next synmake run generate weird error messages
+        rm "$client_root/.smk_compdb_"* 2> /dev/null
+
+        utils::verbose -f -c "${CYAN}" "  [$(date +"%Y-%m-%d %H:%M:%S")]\n"
+    fi
 fi
+
+#--------------------
+# tail
+if [[ -n "$build_cmd" && -n "$log_file" && "$is_summary" == true ]]; then
+    utils::verbose -f -c "${BGREEN}" -p "* " "$log_file:\n"
+    utils::verbose "  tail -n +<Auto Detect> $log_file\n"
+    if [[ "$dry_run" == false ]]; then
+        if [[ "$build_status" -eq 0 ]]; then
+            tail -n +"$(rg --case-sensitive --line-number "List of" "$log_file" | cut -d ':' -f 1)" "$log_file"
+        else
+            tail -n 250 "$log_file" | rg -B 1 -M 0 -i "(^| )error"; tail -n 2 "$log_file"
+        fi
+    fi
+fi
+[[ "$build_status" -eq 0 ]] || exit 1
 
 #--------------------
 # pack command
 pack_cmd=""
-pack_verbose_cmd=""
-
-v_seperator="echo \"--------------------\"
-"
-
-if [[ -n "$pack" ]]; then
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "pack command:" >&2
-    if [[ "$debug" == true ]]; then
-        pack_cmd="$v_seperator    synmake dbgpack"
-        pack_verbose_cmd="synmake dbgpack"
-    else
-        pack_cmd="$v_seperator    synmake optpack"
-        pack_verbose_cmd="synmake optpack"
+if [[ "$pack" == true ]]; then
+    utils::verbose -f -c "${BGREEN}" -p "* " "Packing ...\n"
+    pack_cmd="synmake -C primewave"
+    if [[ -n "$log_file" ]]; then
+        _log_file="$(utils::get_relative_path -d 2 "$(pwd)/primewave" "$log_file")"
+        pack_cmd+=" -log \"${_log_file%.*}.pack.${_log_file##*.}\""
     fi
-    case "$pack" in
-        S|s|simple)
-            pack_cmd="${pack_cmd}-simple"
-            pack_verbose_cmd="${pack_verbose_cmd}-S"
+
+    case "$build_type" in
+        r)
+            pack_cmd+=" optpack"
             ;;
-        V|v|cc_ver)
-            pack_cmd="${pack_cmd}-cc_ver"
-            pack_verbose_cmd="${pack_verbose_cmd}-V"
+        g)
+            pack_cmd+=" dbgpack"
             ;;
-        A|a|all)
+        d)
+            pack_cmd+=" devpack"
             ;;
-        *)
-            echo "Error: Invalid pack category '$pack'"
-            exit 1
     esac
-    utils::verbose "  $pack_verbose_cmd" >&2
-fi
 
-#--------------------
-# tail command
-success_tail_cmd=""
-success_tail_verbose_cmd=""
-fail_tail_cmd=""
-fail_tail_verbose_cmd=""
-
-v_seperator="echo \"--------------------\"
-    utils::verbose --msg-color \"\${BGREEN}\" --prompt \"* \" \"$log_file:\"
-"
-
-if [[ -n "$log_file" && "$is_tail" == true ]]; then
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "success tail command:" >&2
-
-    auto_detect_cmd="\$(rg --case-sensitive --line-number \"List of\" $log_file | cut -d ':' -f 1)"
-
-    success_tail_cmd="$v_seperator    tail -n +$auto_detect_cmd $log_file"
-    success_tail_verbose_cmd="tail -n +<Auto Detect> $log_file"
-
-    utils::verbose "  $success_tail_verbose_cmd" >&2
-fi
-
-if [[ -n "$log_file" ]]; then
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "fail tail command:" >&2
-
-    fail_tail_cmd="$v_seperator    tail -n 250 $log_file | rg -B 1 -M 0 -i \"(^| )error\"; tail -n 2 $log_file"
-    fail_tail_verbose_cmd="tail -n 250 $log_file | rg -B 1 -M 0 -i \"(^| )error\"; tail -n 2 $log_file"
-
-    utils::verbose "  $fail_tail_verbose_cmd" >&2
-fi
-
-#--------------------
-# final command
-nl=$'\n'
-final_cmd=""
-verbose_cmd=""
-if [[ -n "$build_cmd" ]]; then
-    final_cmd="$build_cmd"
-    final_cmd="$final_cmd${nl}status=\$?"
-    final_cmd="$final_cmd${nl}if [[ \$status -eq 0 ]] ; then"
-    [[ -n "$success_tail_cmd" ]] && final_cmd="$final_cmd${nl}    $success_tail_cmd"
-    if [[ -n "$pack_cmd" ]]; then
-        final_cmd="$final_cmd${nl}    $pack_cmd"
-    else
-        final_cmd="$final_cmd${nl}    exit \$status"
-    fi
-    final_cmd="$final_cmd${nl}else"
-    [[ -n "$fail_tail_cmd" ]] && final_cmd="$final_cmd${nl}    $fail_tail_cmd"
-    final_cmd="$final_cmd${nl}    exit \$status"
-    final_cmd="$final_cmd${nl}fi"
-
-    verbose_cmd="$build_cmd"
-    verbose_cmd="$verbose_cmd${nl}  status=\$?"
-    verbose_cmd="$verbose_cmd${nl}  if [[ \$status -eq 0 ]] ; then"
-    [[ -n "$success_tail_verbose_cmd" ]] && verbose_cmd="$verbose_cmd${nl}      $success_tail_verbose_cmd"
-    if [[ -n "$pack_verbose_cmd" ]]; then
-        verbose_cmd="$verbose_cmd${nl}      $pack_verbose_cmd"
-    else
-        verbose_cmd="$verbose_cmd${nl}      exit \$status"
-    fi
-    verbose_cmd="$verbose_cmd${nl}  else"
-    [[ -n "$fail_tail_verbose_cmd" ]] && verbose_cmd="$verbose_cmd${nl}      $fail_tail_verbose_cmd"
-    verbose_cmd="$verbose_cmd${nl}      exit \$status"
-    verbose_cmd="$verbose_cmd${nl}  fi"
-else
-    final_cmd="$pack_cmd"
-    verbose_cmd="  $pack_verbose_cmd"
-fi
-
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "final_cmd:" >&2
-utils::verbose "  $verbose_cmd" >&2
-utils::verbose -- "--------------------" >&2
-
-if [[ "$dry_run" == true ]]; then
-    exit 0
-fi
-
-_client_root="$(p4 -z tag -F %clientRoot% info)"
-
-eval "$final_cmd"
-
-# Overwrite compile_commands.json if it's fully build
-exit_code=$?
-if [[ "$always_make" == true && "$exit_code" == 0 ]] ; then
-    if [[ "$debug" == true ]]; then
-        echo "Skip backup .compile_commands.json because it's a debug build" >&2
-    else
-        f="$_client_root/.compile_commands.json"
-        [[ -e "$f" ]] && cp "$f" "$_client_root/compile_commands.json"
-        # Our make file set someof compile variable with escape on double quote which is meaningless
-        #   and make clangd can't parse macro 'ASSERT_RETURN' correctly
-        # Here replace \\\"VALUE\\\" to \"VALUE\"
-        sed -i 's|\\\\\\"|\\"|g' "$_client_root/compile_commands.json"
+    utils::verbose "  $pack_cmd\n"
+    if [[ "$dry_run" == false ]]; then
+        if bash -c "$pack_cmd"; then
+            utils::verbose -f -c "${CYAN}" "  [$(date +"%Y-%m-%d %H:%M:%S")]\n"
+        else
+            utils::ERROR "Pack fail\n" >&2
+            exit 1
+        fi
     fi
 fi
 
-# Remove .smk_compdb_* because it makes next synmake run generate weird error messages
-rm "$_client_root/.smk_compdb_"* 2> /dev/null
+exit 0
 

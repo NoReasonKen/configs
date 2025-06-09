@@ -24,7 +24,7 @@ if [[ "$(wc -l <<< "$live_remote_vscode_processes")" -gt 1 ]]; then
         # shellcheck disable=SC1091,SC2034
         source "$HOME/bin/utils_sh" && verbose=true
         while IFS=$'\n' read -r process; do
-            utils::verbose --msg-color "${CYAN}" --prompt "* " "$(cut -d " " -f 1,2 <<< "$process") ..." >&2
+            utils::verbose --msg-color "${CYAN}" --prompt "* " "$(cut -d " " -f 1,2 <<< "$process") ...\n" >&2
         done <<< "$live_remote_vscode_processes"
     fi
 fi

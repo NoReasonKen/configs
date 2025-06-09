@@ -18,8 +18,8 @@ user_1      1.6869      2.096
 user_2      1.887       1.8943
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 sort_col=1
 is_reverse=false
@@ -28,16 +28,19 @@ only_logged=false
 verbose=false
 
 while [[ $# -gt 0 ]]; do
-	case $1 in
-		-c|--column)
+    case $1 in
+        -c|--column)
             if [[ $# -ge 2 ]]; then
                 shift
-                [[ $1 -lt 1 || $1 -gt 3 ]] && { echo "Error: Invalid column, should be 1~3"; exit 1; }
+                if [[ $1 -lt 1 || $1 -gt 3 ]]; then
+                    utils::ERROR "Invalid column, should be 1~3\n" >&2
+                    exit 1
+                fi
                 sort_col=$1; shift
             else
-                echo "-c|--column need an argument" && exit 1
+                utils::ERROR "-c|--column need an argument" >&2 && exit 1
             fi
-			;;
+            ;;
         -r|--reverse)
             is_reverse=true; shift
             ;;
@@ -53,13 +56,14 @@ while [[ $# -gt 0 ]]; do
         -v|--verbose)
             verbose=true; shift
             ;;
-		*)
-            echo "Error: Unknown argument '$1'" && exit 1
-			;;
-	esac
+        *)
+            utils::ERROR "Unknown argument '$1'\n" >&2 && exit 1
+            ;;
+    esac
 done
 
-utils::verbose --msg-color "${CYAN}" "column=$sort_col; reverse=$is_reverse; user=$user; logged=$only_logged" >&2
+utils::verbose -c "${CYAN}" "column=$sort_col; reverse=$is_reverse; user=$user;" \
+    "logged=$only_logged\n"
 
 if [[ "$only_logged" == true ]]; then
     users="$(users | tr ' ' '\n' | sort -u)"

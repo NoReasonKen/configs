@@ -10,8 +10,8 @@ options:
     -h, --help                  Display this help and exit
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 command=""
 user=""
@@ -35,25 +35,36 @@ while [[ $# -gt 0 ]]; do
             echo "$help" && exit 0
             ;;
         *)
-            echo "Error: Unknown parameter '$1'" >&2
+            utils::ERROR "Unknown parameter '$1'\n" >&2
             exit 1
             ;;
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "command=$command; user=$user; kill=$kill_signal" >&2
+if [[ -z "$command" && -z "$user" ]]; then
+    utils::ERROR "Should use one kind of filter (--command or --user) at least\n" >&2
+    exit 1
+fi
+
+utils::verbose -c "${CYAN}" "command=$command; user=$user; kill=$kill_signal\n"
 
 result="$(ps aux)"
+header="$(head -n 1 <<< "$result")"
 if [[ -n "$command" ]]; then
     result="$(rg --color=always --max-columns 0 "$command" <<< "$result")"
 fi
 if [[ -n "$user" ]]; then
-    result="$(rg --color=always --max-columns 0 "$user" <<< "$result")"
+    result="$(rg --color=always --max-columns 0 --colors "match:fg:blue" "$user" <<< "$result")"
 fi
 processes="$(rg --max-columns 0 -v "$(basename "$0")" <<< "$result")"
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "Filtered processes:\n" >&2
-utils::verbose --msg-color "${CYAN}" "command=$command; user=$user; kill=$kill_signal" >&2
+utils::verbose -c "${BGREEN}" -p "* " "Filtered processes:\n"
+utils::verbose -c "${CYAN}" "$header\n$processes\n"
 
+if [[ -z "$processes" ]]; then
+    exit 0
+fi
+
+echo "$header"
 if [[ -z "$kill_signal" ]]; then
     [[ -n "$processes" ]] && echo "$processes"
     exit 0

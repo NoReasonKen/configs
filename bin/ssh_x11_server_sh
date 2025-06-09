@@ -10,12 +10,11 @@ usage:
     - Run xclock on x11 server
         ssh_x11_server_sh \"~/bin/zsh -c \\\"xclock\\\"\"
     - Run xclock on specified server
-        ssh_x11_server_sh -x myhost \"~/bin/zsh -c \\\"xclock\\\"\"
+        ssh_x11_server_sh -x my_host \"~/bin/zsh -c \\\"xclock\\\"\"
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "color_sh"
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 x11_server="$__X11_SERVER"
 command=""
@@ -38,10 +37,17 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-utils::verbose --msg-color "${CYAN}" "x11_server=$x11_server; command=$command; verbose=$verbose" >&2
+utils::verbose -c "${CYAN}" "x11-server=$x11_server; command=$command; verbose=$verbose\n"
 
-[[ -z "$x11_server" ]] && { echo "Error: No x11_server specified, please either explicitly set --x11-server or set env '__X11_SERVER'" >&2 ; exit 1; }
-[[ -z "$command" ]] && { echo "Error: Empty command" >&2 ; exit 1; }
+if [[ -z "$x11_server" ]]; then
+    utils::ERROR "No x11-server specified, please either explicitly set --x11-server or" \
+        "set env '__X11_SERVER'\n" >&2
+    exit 1
+fi
+if [[ -z "$command" ]]; then
+    utils::ERROR "Empty command\n" >&2
+    exit 1
+fi
 
 ssh -t -X "$x11_server" "$command"
 

@@ -1,0 +1,232 @@
+#!/u/chehuang/bin/bash
+
+help="Usage: p4_commit_sh [<OPTION>...] <CHANGE>
+Call 'pci_validate' and 'p4commit' with additional custom processing
+Note that, the default option is used for all merge options, if you want different settings, you
+may run 'p4commit ...' first to set them
+options:
+    -r, --repeat <TIMES>        Set repeat times for both pci-v and pci
+    --repeat-pci-v <TIMES>      Repeatly execute pci_validate if failed for n-times
+    --repeat-pci <TIMES>        Repeatly execute p4commit if failed for n-times
+    --dry-run                   Only show the constructed command instead of running it
+    -v, --verbose               Show verbose messages in console
+    -h, --help                  Display this help and exit
+"
+
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
+
+change=""
+repeat_pci_v=0
+repeat_pci=0
+verbose=false
+dry_run=false
+
+_is_numeric_re='^[0-9]+$'
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -r|--repeat)
+            shift;
+            if [[ ! $1 =~ $_is_numeric_re ]]; then
+                utils::ERROR "Missing repeat times\n" >&2
+                exit 1
+            fi
+            repeat_pci_v=$1
+            repeat_pci=$1
+            shift
+            ;;
+        --repeat-pci-v)
+            shift
+            if [[ ! $1 =~ $_is_numeric_re ]]; then
+                utils::ERROR "Missing repeat times\n" >&2
+                exit 1
+            fi
+            repeat_pci_v=$1
+            shift
+            ;;
+        --repeat-pci)
+            shift
+            if [[ ! $1 =~ $_is_numeric_re ]]; then
+                utils::ERROR "Missing repeat times\n" >&2
+                exit 1
+            fi
+            repeat_pci=$1
+            shift
+            ;;
+        --dry-run)
+            dry_run=true; shift
+            ;;
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help"
+            exit 0
+            ;;
+        *)
+            if [[ -z "$change" ]]; then
+                change=$1
+            else
+                utils::ERROR "Can't accept multiple change numbers\n" >&2
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+[[ -z "$change" ]] && { utils::ERROR "Missing change number\n" >&2; exit 1; }
+
+utils::verbose -c "${CYAN}" \
+    "change=$change; repeat_pci_v=$repeat_pci_v; repeat_pci=$repeat_pci; dry-run=$dry_run\n"
+
+[[ "$dry_run" == true ]] && exit 0
+
+utils::verbose -f -c "${BRED}" -p "* " \
+    "This script execute several commands to your workspace file without check\n" >&2
+utils::verbose -f -c "${BRED}" \
+    "  Please ensure files of change in your workspace will not be modified during this" \
+    "script running\n" >&2
+
+_p4_sync_and_check() {
+    _indent="$1"
+
+    printf "%s" "$_indent" >&2 && utils::verbose -f -c "${BGREEN}" -p "* " "Sync\n" >&2
+    p4_sync_sh -q
+    _sync_msg="$(p4_sync_sh -qqq)"
+    exit_code=$?
+    printf "%s" "$_indent" >&2 && utils::verbose -p "* " "Sync exit_code=$exit_code\n"
+    if [[ "$_sync_msg" != "File(s) up-to-date." ]]; then
+        printf "%s" "$_indent" >&2 && utils::ERROR "'p4_sync_sh' with unhandled problems\n" >&2
+        echo "$_sync_msg" >&2
+        return 1
+    fi
+    return 0
+}
+
+_p4_shelve_and_check() {
+    _indent="$1"
+
+    printf "%s" "$_indent" >&2 && utils::verbose -f -c "${BGREEN}" -p "* " "Shelve\n" >&2
+    _shelve_msg="$(p4 shelve -f -c "$change")"
+    exit_code=$?
+    printf "%s" "$_indent" >&2 && utils::verbose -p "* " "Shelve exit_code=$exit_code\n"
+    if [[ "$exit_code" -eq 0 ]]; then
+        rg --color=never -i "change $change" <<< "$_shelve_msg"
+    else
+        printf "%s" "$_indent" >&2 && utils::ERROR "'p4 shelve' with unhandled problems\n" >&2
+        echo "$_shelve_msg" >&2
+        return 1
+    fi
+    return 0
+}
+
+is_interrupted=false
+# shellcheck disable=SC2317
+_forward_interrupt() {
+    utils::WARNING "\nForwarding SIGINT to pid=$1\n" >&2
+    is_interrupted=true
+    kill -SIGINT "$1"
+    sleep 1
+    kill -SIGINT "$1"
+}
+
+pci_v_pid=""
+while true; do
+    if ! _p4_sync_and_check "" || ! _p4_shelve_and_check ""; then
+       [[ -n "$pci_v_pid" ]] && kill -SIGINT "$pci_v_pid"
+       exit 1
+    fi
+
+    utils::verbose -f -c "${BGREEN}" -p "* " "PCI-V\n" >&2
+    pci_v_bin="$(viewtool info | rg "Reference root" | cut -d "=" -f 2 | xargs)"
+    pci_v_bin+="/build_tools/bin/pci_validate"
+    if [[ -f "$pci_v_bin" ]]; then
+        "$pci_v_bin" -e "$change" &
+        pci_v_pid=$!
+    else
+        utils::ERROR "Can't find corresponding 'pci_validate' in reference root, check your" \
+            ".viewinfo" >&2
+    fi
+
+    trap '_forward_interrupt $pci_v_pid' SIGINT
+    count=0
+    # Check if the process is still exists
+    while kill -0 "$pci_v_pid" 2>/dev/null; do
+        count=$((count+1))
+        if [[ "$count" == 360 ]]; then
+            if ! _p4_sync_and_check "  " || ! _p4_shelve_and_check ""; then
+                kill -SIGINT "$$"
+                exit 1
+            fi
+
+            count=0
+        fi
+
+        sleep 10
+        if [[ "$is_interrupted" == true ]]; then
+            break
+        fi
+    done
+    trap - SIGINT
+
+    wait "$pci_v_pid"
+    exit_code=$?
+    utils::verbose -p "* " "exit_code=$exit_code\n"
+    [[ "$is_interrupted" == true ]] && exit 130  # Exit code 130 is from pci_v after interrupt
+
+    if [[ "$exit_code" -ne 0 ]]; then
+        if [[ "$repeat_pci_v" -gt 0 ]]; then
+            utils::WARNING -c "$BRED" -p "* " "PCI-V fail, retry $NC($repeat_pci_v remaining)\n" >&2
+            repeat_pci_v=$((repeat_pci_v - 1))
+            continue
+        else
+            utils::ERROR "'pci_validate' does not success\n" >&2
+            exit 1
+        fi
+    fi
+
+    break
+done
+
+trap 'utils::WARNING "\nInterrupt signal blocked, not allowed during PCI process\n" >&2' SIGINT
+while true; do
+    _p4_sync_and_check
+
+    utils::verbose -f -c "${BGREEN}" -p "* " "PCI\n" >&2
+    # Use default options for all merge options
+    printf "\n\n\n" | p4commit -c "$change" &
+    p4_commit_pid=$!
+
+    # Check if the process is still exists
+    count=0
+    while kill -0 "$p4_commit_pid" 2>/dev/null; do
+        count=$((count+1))
+        if [[ "$count" == 60 ]]; then
+            _p4_sync_and_check "  "
+            count=0
+        fi
+
+        sleep 10
+    done
+
+    wait "$p4_commit_pid"
+    exit_code=$?
+    utils::verbose -p "* " "exit_code=$exit_code\n"
+    if [[ ! "$exit_code" ]]; then
+        if [[ "$repeat_pci" -gt 0 ]]; then
+            utils::WARNING -c "$BRED" -p "* " "PCI fail, retry $NC($repeat_pci remaining)\n" >&2
+            repeat_pci=$((repeat_pci - 1))
+            continue
+        else
+            utils::ERROR "'p4commit' does not success\n" >&2
+            exit 1
+        fi
+    fi
+
+    break
+done
+
+exit 0
+

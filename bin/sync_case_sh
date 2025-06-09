@@ -2,17 +2,28 @@
 help="Usage: sync_case_sh [OPTION]... <CASE_PATH>
 Help sync case to client
 options:
+    -d, --depot <P4_PATH>   Specify basic depot path (path before branch)
+                            [Default: //custom/cdesigner]
+                            e.g. //custom/cdesigner/main/dev/... -> //custom/cdesigner
     -v, --verbose           Show verbose messages in console
     -h, --help              Display this help and exit
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 case_path=""
+depot="//custom/cdesigner"
 verbose=false
 while [[ $# -gt 0 ]]; do
     case $1 in
+        -d|--depot)
+            shift; depot=$1; shift
+            if [[ ! $depot =~ ^// ]]; then
+                utils::ERROR "Invalid depot path, must start with //\n" >&2
+                exit 1
+            fi
+            ;;
         -v|--verbose)
             verbose=true; shift
             ;;
@@ -20,30 +31,58 @@ while [[ $# -gt 0 ]]; do
             echo "$help" && exit 0
             ;;
         *)
-            [[ -n $case_path ]] && { echo "Error: Can't specify multiple paths"; exit 1; }
+            if [[ -n $case_path ]]; then
+                utils::ERROR "Can't specify multiple paths\n" >&2
+                exit 1
+            fi
             case_path=$1; shift
             ;;
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "case_path=$case_path; verbose=$verbose" >&2
+utils::verbose -c "${CYAN}" "depot=$depot; case_path=$case_path; verbose=$verbose\n"
 
-[[ -n "$(command -v map_depot_path_sh)" ]] || { echo "Error: Can't find command 'map_depot_path_sh'" ; exit 1; }
-depot_path=$(map_depot_path_sh -m qa "$case_path") || { echo "Error: Can't find case in depot" ; exit 1; }
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "depot_path=$depot_path" >&2
+if [[ -z "$(command -v map_depot_path_sh)" ]]; then
+    utils::ERROR "Can't find command 'map_depot_path_sh'\n" >&2
+    exit 1
+fi
+if ! depot_path=$(map_depot_path_sh -d "$depot" -m qa "$case_path"); then
+    utils::ERROR "Can't find case in depot\n" >&2
+    exit 1
+fi
+utils::verbose -c "${BGREEN}" -p "* " "depot_path=$depot_path\n"
 
 client_name=$(p4 -z tag -F %clientName% info)
-[[ "$client_name" == "none" ]] && { echo "Error: Missing p4 client name"; exit 1; }
+if [[ "$client_name" == "none" || "$client_name" == "\*unknown\*" ]]; then
+    utils::ERROR "Missing p4 client\n" >&2
+    exit 1
+fi
 
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "client_name=$client_name" >&2
-client_case_path="//${client_name}/qa/${depot_path#*/qa/}"
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "client_case_path=$client_case_path" >&2
+utils::verbose -c "${BGREEN}" -p "* " "client_name=$client_name\n"
+_client_spec="$(p4 client -o)"
+_view_start_line="$(rg -n "^View:" <<< "$_client_spec" | cut -d ":" -f 1)"
+if [[ "$(wc -l <<< "$_view_start_line")" -ne 1 ]]; then
+    utils::ERROR "Client spec should only contains only one 'View:' segment\n" >&2
+    exit 1
+fi
+
+# Here assumes that the next 2 folder after the depot path are branch
+# e.g. //custom/cdesigner/main/dev, depot_path='//custom/cdesigner', branch='main/dev'
+depot_branch_path="$(
+    sed -n "$((_view_start_line+1)),\$p" <<< "$_client_spec" | \
+    sed -E -n "s|^\\s*($depot/[^/]+/[^/]+)/.*|\\1|p" | \
+    sort -u
+)"
+utils::verbose -c "${BGREEN}" -p "* " "depot_branch_path=$depot_branch_path\n"
+
+client_case_path="//${client_name}/${depot_path#"${depot_branch_path}"/}"
+utils::verbose -c "${BGREEN}" -p "* " "client_case_path=$client_case_path\n"
 
 spec_text="\t${depot_path}/... ${client_case_path}/..."
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "spec_text=$spec_text" >&2
+utils::verbose -c "${BGREEN}" -p "* " "spec_text=$spec_text\n"
 
 client_root=$(p4 -z tag -F %clientRoot% info)
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "client_root=$client_root" >&2
+utils::verbose -c "${BGREEN}" -p "* " "client_root=$client_root\n"
 
 client_file="$client_root/.p4client.tmp"
 p4 client -o > "$client_file"
@@ -56,7 +95,7 @@ p4 client -i < "$client_file"
 
 if [[ $is_exists -eq 1 ]]; then
     local_case_path=${client_root}/${client_case_path#//"${client_name}"/}
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "p4 sync ${client_case_path}/..." >&2
+    utils::verbose -c "${BGREEN}" -p "* " "p4 sync ${client_case_path}/...\n"
     p4 sync "${local_case_path}/..."
 fi
 

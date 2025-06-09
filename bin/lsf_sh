@@ -19,7 +19,7 @@ sub-commands:
         example: lsf_sh jobs edag_batch1 batch_cme
     kill
         Kill jobs in specific app
-        usage: lsf_sh kill [<OPTION>...] [<MODULE>] [<JOB-ID>]
+        usage: lsf_sh kill [<OPTION>...] [<JOB-ID>]
         example: lsf_sh kill edag_int 1234567  # Without interactive-kill, both module and job-id are needed
         example: lsf_sh kill -i  # Search in all possible modules, might be slow
         example: lsf_sh kill -i edag_int  # Only search in specific module
@@ -60,7 +60,7 @@ sub-commands:
             -P, --preset <ENUM>             Use preset enums. They are order irrelevant, and any explicit declared
                                             params will override params in preset.
                                             B(batch)='-m edag_batch1 -o \"-app batch_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\" -P <tag> -We 10:0\"'
-                                            I(integrate)='-m edag_int -o \"-app int_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\" -P <tag> -We 240:0\"'
+                                            I(integrate)='-m edag_int -o \"-app int_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\" -P <tag> -We 720:0\"'
                                             <tag>=\"harness=sysreg:#:product=primewave:#:project=primewave:#:identifier=\$(whoami)_\$(date +\"%Y-%m-%d_%H:%M:%S\")\"
                                             E.G. 'lsf_sh -We 1:0 -P B -m edag_batch2' ===
                                                  'lsf_sh -m edag_batch2 -o \"-app batch_cme -R \\\"select[os=AlmaLinux8.4]\\\" -R \\\"rusage[mem=32G]\\\" -P <tag> -We 1:0'
@@ -79,8 +79,8 @@ MODULES=(
     #"edag_shared"
 )
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 [[ $# -le 0 ]] && echo "$help" && exit 0
 
@@ -98,6 +98,29 @@ interactive_kill=false
 dry_run=false
 verbose=false
 
+# Handle partial sub-command
+case $sub_command in
+    modules|m|mo|mod|modu|modul|module)
+        sub_command="modules"
+        ;;
+    jobs|j|jo|job)
+        sub_command="jobs"
+        ;;
+    kill|k|ki|kil)
+        sub_command="kill"
+        ;;
+    hist|h|hi|his)
+        sub_command="hist"
+        ;;
+    sub|s|su)
+        sub_command="sub"
+        ;;
+    attach|a|at|att|atta|attac)
+        sub_command="attach"
+        ;;
+esac
+
+
 # Arguments processing start
 shift
 case $sub_command in
@@ -114,13 +137,16 @@ case $sub_command in
                     verbose=true
                     ;;
                 *)
-                    [[ -n "$module" ]] && { echo "Error: Command 'modules' do not accept multiple modules" && exit 1; }
+                    if [[ -n "$module" ]]; then
+                        utils::ERROR "Command 'modules' does not accept multiple modules\n" >&2
+                        exit 1
+                    fi
                     module="$1"
                     ;;
             esac
             shift
         done
-        utils::verbose --msg-color "${CYAN}" "sub_command=modules; MODULE=$module" >&2
+        utils::verbose -c "${CYAN}" "sub_command=modules; MODULE=$module\n"
         ;;
     jobs)
         while [[ $# -gt 0 ]]; do
@@ -133,7 +159,11 @@ case $sub_command in
                     ;;
                 *)
                     if [[ -n "$module" ]]; then
-                        [[ -n "$app" ]] && { echo "Error: Command 'jobs' do not accept multiple modules or apps" && exit 1; }
+                        if [[ -n "$app" ]]; then
+                            utils::ERROR "Command 'jobs' do not accept multiple modules or" \
+                                "apps\n" >&2
+                            exit 1
+                        fi
                         app="$1"
                     else
                         module="$1"
@@ -142,8 +172,8 @@ case $sub_command in
             esac
             shift
         done
-        [[ -z "$module" ]] && { echo "Error: Missing module" && exit 1; }
-        utils::verbose --msg-color "${CYAN}" "sub_command=jobs; MODULE=$module; APP=$app" >&2
+        [[ -z "$module" ]] && { utils::ERROR "Missing module\n" >&2 && exit 1; }
+        utils::verbose -c "${CYAN}" "sub_command=jobs; MODULE=$module; APP=$app\n"
         ;;
     kill)
         while [[ $# -gt 0 ]]; do
@@ -161,17 +191,21 @@ case $sub_command in
                     verbose=true
                     ;;
                 *)
-                    [[ -n "$job_id" ]] && { echo "Error: Command 'jobs' do not accept multiple job-ids" && exit 1; }
+                    if [[ -n "$job_id" ]]; then
+                        utils::ERROR "Command 'jobs' do not accept multiple job-ids\n" >&2
+                        exit 1
+                    fi
                     job_id="$1"
                     ;;
             esac
             shift
         done
         if [[ "$interactive_kill" == false ]]; then
-            [[ -z "$module" ]] && { echo "Error: Missing module" && exit 1; }
-            [[ -z "$job_id" ]] && { echo "Error: Missing job-id" && exit 1; }
+            [[ -z "$module" ]] && { utils::ERROR "Missing module\n" >&2 && exit 1; }
+            [[ -z "$job_id" ]] && { utils::ERROR "Missing job-id\n" >&2 && exit 1; }
         fi
-        utils::verbose --msg-color "${CYAN}" "sub_command=kill; MODULE=$module; APP=$app; JOB-ID=$job_id; interactive-kill=$interactive_kill" >&2
+        utils::verbose -c "${CYAN}" "sub_command=kill; MODULE=$module; APP=$app;" \
+            "JOB-ID=$job_id; interactive-kill=$interactive_kill\n"
         ;;
     hist)
         while [[ $# -gt 0 ]]; do
@@ -205,7 +239,11 @@ case $sub_command in
                     ;;
                 *)
                     if [[ -n "$module" ]]; then
-                        [[ -n "$app" ]] && { echo "Error: Command 'jobs' do not accept multiple modules or apps" && exit 1; }
+                        if [[ -n "$app" ]]; then
+                            utils::ERROR "Command 'jobs' do not accept multiple modules or" \
+                                "apps\n" >&2
+                            exit 1
+                        fi
                         app="$1"
                     else
                         module="$1"
@@ -214,8 +252,11 @@ case $sub_command in
             esac
             shift
         done
-        [[ -z "$module" ]] && { echo "Error: Missing module" && exit 1; }
-        utils::verbose --msg-color "${CYAN}" "sub_command=hist; MODULE=$module; APP=$app; long=${hist_args[0]}; all=${hist_args[1]}; pending=${hist_args[2]}; running=${hist_args[3]}; suspend=${hist_args[4]}; done=${hist_args[5]}; job-id=$job_id" >&2
+        [[ -z "$module" ]] && { utils::ERROR "Missing module\n" >&2 && exit 1; }
+        utils::verbose -c "${CYAN}" "sub_command=hist; MODULE=$module; APP=$app;" \
+            "long=${hist_args[0]}; all=${hist_args[1]}; pending=${hist_args[2]}; " \
+            "running=${hist_args[3]}; suspend=${hist_args[4]}; done=${hist_args[5]}; " \
+            "job-id=$job_id\n"
         ;;
     sub)
         _sub_preset=""
@@ -231,20 +272,24 @@ case $sub_command in
             esac
         done
 
-        _tag="\"harness=sysreg:#:product=primewave:#:project=primewave:#:identifier=\$(whoami)_\$(date +\"%Y-%m-%d_%H:%M:%S\")\""
+        _tag_part1="harness=sysreg:#:product=primewave:#:project=primewave:#:"
+        _tag_part2="identifier=\$(whoami)_\$(date +\"%Y-%m-%d_%H:%M:%S\")"
+        _tag="\"${_tag_part1}${_tag_part2}\""
         while read -rn 1 ch; do
             case $ch in
                 B|b)
                     module="edag_batch1"
-                    sub_options="-app batch_cme -R \"select[os=AlmaLinux8.4]\" -R \"rusage[mem=32G]\" -P $_tag -We 10:0"
+                    sub_options="-app batch_cme -R \"select[os=AlmaLinux8.4]\" " \
+                        "-R \"rusage[mem=32G]\" -P $_tag -We 10:0"
                     ;;
                 I|i)
                     module="edag_int"
-                    sub_options="-app int_cme -R \"select[os=AlmaLinux8.4]\" -R \"rusage[mem=32G]\" -P $_tag -We 240:0 -Is csh"
+                    sub_options="-app int_cme -R \"select[os=AlmaLinux8.4]\" "
+                    sub_options+="-R \"rusage[mem=16G]\" -P $_tag -We 720:0 -Is csh"
                     ;;
             esac
         done < <(echo -n "$_sub_preset")
- 
+
         set -- "${_sub_args[@]}"
         while [[ $# -gt 0 ]]; do
             case $1 in
@@ -266,11 +311,18 @@ case $sub_command in
             esac
             shift
         done
-        [[ -z "$module" ]] && { echo "Error: Missing module to load" && exit 1; }
-        [[ "$sub_options" == *"-Is "* ]] && { __tmp="${sub_options##*-Is }"; interactive_shell="${__tmp%%( *|$)}"; }
-        [[ -z "$interactive_shell" && -z "$command" ]] && { echo "Error: Missing command to execute" && exit 1; }
+        [[ -z "$module" ]] && { utils::ERROR "Missing module to load\n" >&2 && exit 1; }
+        if [[ "$sub_options" == *"-Is "* ]]; then
+            __tmp="${sub_options##*-Is }"
+            interactive_shell="${__tmp%%( *|$)}"
+        fi
+        if [[ -z "$interactive_shell" && -z "$command" ]]; then
+            utils::ERROR "Missing command to execute\n" >&2
+            exit 1
+        fi
 
-        utils::verbose --msg-color "${CYAN}" "sub_command=sub; module=$module; sub-options=$sub_options; COMMAND=$command" >&2
+        utils::verbose -c "${CYAN}" "sub_command=sub; module=$module;" \
+            "sub-options=$sub_options; COMMAND=$command\n"
         ;;
     attach)
         module="edag_int"
@@ -283,16 +335,17 @@ case $sub_command in
                     verbose=true
                     ;;
                 *)
-                    echo "Error: Invalid parameters for command 'attach'"
+                    utils::ERROR "Invalid parameters for command 'attach'\n" >&2
                     exit 1
                     ;;
             esac
             shift
         done
-        utils::verbose --msg-color "${CYAN}" "sub_command=attach; modeule=$module" >&2
+        utils::verbose -c "${CYAN}" "sub_command=attach; module=$module\n"
         ;;
     *)
-        echo "Error: Unknown sub-command '$1'" && exit 1
+        utils::ERROR "Unknown sub-command '$1'\n" >&2
+        exit 1
         ;;
 esac
 # Arguments processing end
@@ -312,7 +365,7 @@ case "$sub_command" in
         [[ -n "$app" ]] && cmd_str+=" -app $app"
         ;;
     kill)
-        utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Running jobs exist:" >&2
+        utils::verbose -f -c "${BGREEN}" -p "* " "Running jobs exist:\n" >&2
 
         # Find existing jobs
         _MODULES=( "${MODULES[@]}" )
@@ -340,7 +393,7 @@ case "$sub_command" in
         done
         _jobs_str="$(tail -n +2 <<< "$_jobs_str")"
 
-        _prompt="$(utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Type index or job-id to kill: ")"
+        _prompt="$(utils::verbose -f -c "${BGREEN}" -p "* " "Type index or job-id to kill: ")"
         _input=""
         while [[ -z "$_input" ]]; do
             read -r -p "$_prompt" _input
@@ -356,9 +409,14 @@ case "$sub_command" in
                     _job_id="$(awk '{print $1}' <<< "$_target_job")"
                     _module=""
                     for elem in "${_jobs_module_arr[@]}"; do
-                        [[ "$(cut -d ':' -f 1 <<< "$elem")" == "$_job_id" ]] && _module="$(cut -d ':' -f 2 <<< "$elem")"
+                        if [[ "$(cut -d ':' -f 1 <<< "$elem")" == "$_job_id" ]]; then
+                            _module="$(cut -d ':' -f 2 <<< "$elem")"
+                        fi
                     done
-                    [[ -z "$_module" ]] && { echo "Error: Extract job module fail" >&2 ; exit 1; }
+                    if [[ -z "$_module" ]]; then
+                        utils::ERROR "Extract job module fail\n" >&2
+                        exit 1
+                    fi
                     cmd_str="source /global/lsf/cells/${_module}/conf/profile.lsf && bkill $_job_id"
                 fi
             fi
@@ -382,8 +440,9 @@ case "$sub_command" in
         _identifier="${sub_options#*identifier=}"
         _identifier="${_identifier%%:#:*}"
         _identifier="${_identifier%\"*}"
-        cmd_str="$_src_cmd && bsub $sub_options"
+        cmd_str="$_src_cmd && "
         if [[ -z "$interactive_shell" ]]; then
+            cmd_str+="__LSF_JOB_FLAG=1 __LSF_INTERACTIVE_SHELL_FLAG=0 bsub $sub_options"
             if ! grep -q " -o " <<< "$sub_options"; then
                 if [[ ! -d .lsf_logs ]]; then
                     mkdir .lsf_logs
@@ -399,6 +458,7 @@ case "$sub_command" in
             [[ -n "$CITRIX_REMOTE_DISPLAY" ]] && cmd_str+=" export DISPLAY=$CITRIX_REMOTE_DISPLAY\;"
             cmd_str+=" $command"
         else
+            cmd_str+="__LSF_JOB_FLAG=0 __LSF_INTERACTIVE_SHELL_FLAG=1 bsub $sub_options"
             export SHELL=""
             export HOST=""
             export DISPLAY="$CITRIX_REMOTE_DISPLAY"
@@ -412,9 +472,12 @@ case "$sub_command" in
             _input=""
             _hist_int="$(lsf_sh hist "$module" -r | tail -n +2)"
             _job_ids_str="$(tail -n +2 <<< "$_hist_int")"
-            [[ -z "$_job_ids_str" ]] && { echo "Error: No existing interactive shell job" >&2 ; exit 1; }
+            if [[ -z "$_job_ids_str" ]]; then
+                utils::ERROR "No existing interactive shell job\n" >&2
+                exit 1
+            fi
 
-            utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Running interactive shells exist:" >&2
+            utils::verbose -f -c "${BGREEN}" -p "* " "Running interactive shells exist:\n" >&2
 
             declare -i _i=0
             while read -r line; do
@@ -425,7 +488,7 @@ case "$sub_command" in
                 fi
                 _i+=1
             done <<< "$_hist_int"
-            _prompt="$(utils::verbose --force --msg-color "${BGREEN}" --prompt "* " "Type index or job-id to attach: ")"
+            _prompt="$(utils::verbose -f -c "${BGREEN}" -p "* " "Type index or job-id to attach: ")"
             while [[ -z "$_input" ]]; do
                 read -r -p "$_prompt" _input
                 if [[ -n "$_input" ]]; then
@@ -439,19 +502,22 @@ case "$sub_command" in
                     else
                         _sh="$(awk '{print $3}' <<< "$_target_job")"
                         _job_id="$(awk '{print $1}' <<< "$_target_job")"
-                        cmd_str="$_src_cmd && battach -L $(which "$_sh") $_job_id"
+                        cmd_str="$_src_cmd && "
+                        cmd_str+="__LSF_JOB_FLAG=0 __LSF_INTERACTIVE_SHELL_FLAG=1 "
+                        cmd_str+="battach -L $(which "$_sh") $_job_id"
                     fi
                 fi
             done
         ;;
     *)
-        echo "Error: Unknown sub-command '$1'"
+        utils::ERROR "Unknown sub-command '$1'\n" >&2
         exit 1
         ;;
 esac
 # Construct command string end
-
-utils::verbose --msg-color "${CYAN}" "cmd='$cmd_str'" >&2
-[[ "$dry_run" == false ]] && eval "$cmd_str"
-exec
+utils::verbose -c "${CYAN}" "cmd='$cmd_str'\n"
+if [[ "$dry_run" == false ]]; then
+    eval "$cmd_str"
+    exec
+fi
 

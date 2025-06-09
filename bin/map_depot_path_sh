@@ -1,25 +1,40 @@
 #!/u/chehuang/bin/bash
-help="Usage: map_depot_path_sh [OPTION]... [PATH]
+help="Usage: map_depot_path_sh [OPTION]... <PATH>
 Help mapping between path and depot path
 options:
-    -m, --mode [MODE]       Specify mode, can be {qa}
+    -d, --depot <P4_PATH>   Specify basic depot path (path before branch)
+                            [Default: //custom/cdesigner]
+                            e.g. //custom/cdesigner/main/dev/... -> //custom/cdesigner
+    -m, --mode <MODE>       Specify mode, can be {qa} [Default: qa]
+                            (Set default to qa because there is only one mode now)
     -v, --verbose           Show verbose messages in console
     -h, --help              Display this help and exit
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 VALID_MODES=("qa")
 
+depot="//custom/cdesigner"
 mode=""
 verbose=false
 path=""
 while [[ $# -gt 0 ]]; do
     case $1 in
+        -d|--depot)
+            shift; depot=$1; shift
+            if [[ ! $depot =~ ^// ]]; then
+                utils::ERROR "Invalid depot path, must start with //\n" >&2
+                exit 1
+            fi
+            ;;
         -m|--mode)
             shift; mode=$1; shift
-            [[ ! ${VALID_MODES[@]} =~ $mode ]] && echo "Error: Invalid mode, valid modes: (${VALID_MODES[@]})"
+            if [[ ! ${VALID_MODES[@]} =~ $mode ]]; then
+                utils::ERROR "Invalid mode, valid modes: (${VALID_MODES[*]})\n" >&2
+                exit 1
+            fi
             ;;
         -v|--verbose)
             verbose=true; shift
@@ -28,67 +43,130 @@ while [[ $# -gt 0 ]]; do
             echo "$help" && exit 0
             ;;
         *)
-            [[ -n $path ]] && { echo "Error: Can't specify multiple paths"; exit 1; }
+            [[ -n $path ]] && { utils::ERROR "Can't specify multiple paths\n" >&2; exit 1; }
             path=$1; shift
             ;;
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "mode=$mode; verbose=$verbose; path=$path" >&2
+[[ -z $path ]] && { utils::ERROR "Missing path\n" >&2; exit 1; }
 
-if [[ -f $path ]]; then
-    is_file=true
-else
-    is_file=false
-fi
+utils::verbose -c "${CYAN}" "depot=$depot; mode=$mode; verbose=$verbose; path=$path\n"
 
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "is_file: $is_file" >&2
+get_depot_branch_path_of_client_root() {
+    local _depot="$1"
+    local -n _result_ref="$2"
 
+    local _client_spec _view_start_line
+
+    _client_spec="$(p4 client -o)"
+    _view_start_line="$(rg -n "^View:" <<< "$_client_spec" | cut -d ":" -f 1)"
+    # Here assumes that the next 2 folder after the depot path are branch
+    _result_ref="$(
+        sed -n "$((_view_start_line+1)),\$p" <<< "$_client_spec" | \
+        sed -E -n "s|^\\s*($_depot/[^/]+/[^/]+)/.*|\\1|p" | \
+        sort -u
+    )"
+    utils::verbose -c "${BGREEN}" -p "* " "depot_branch_path=$_result_ref\n"
+
+    if [[ $_result_ref =~ $'\n' ]]; then
+        utils::ERROR "Detect multiple candidate depots in view.\n" >&2
+        return 1
+    fi
+
+    return 0
+}
+
+qa_map_depot_path_by_case_path() {
+    local _path="$1"
+    local _depot="$2"
+    local -n _result_ref="$3"
+
+    local _is_file
+    if [[ -f $_path ]]; then
+        _is_file=true
+    else
+        _is_file=false
+    fi
+    utils::verbose -c "${BGREEN}" -p "* " "is_file: $_is_file\n"
+
+    local _dir_name
+    if [[ $_is_file == true ]]; then
+        _dir_name="$(dirname "$_path")"
+    else
+        _dir_name="$_path"
+    fi
+    utils::verbose -c "${BGREEN}" -p "* " "dir_name=$_dir_name\n"
+
+    local _testcase_dir
+    if _testcase_dir="$(dirname "$(readlink -e "$_dir_name/run")")"; then
+        cd "$_testcase_dir" || { utils::ERROR "Failed to cd to $_testcase_dir\n" >&2; return 1; }
+        utils::verbose -c "${BGREEN}" -p "* " "cd $_testcase_dir\n"
+    else
+        utils::ERROR "Invalid path\n" >&2
+        return 1
+    fi
+
+    local _depot_branch_path
+    if ! get_depot_branch_path_of_client_root "$_depot" _depot_branch_path; then
+        return 1
+    fi
+
+    # A strong assumption that qa's testcase path has a trait: <client_root>/sqa/checker/...
+    local _case_relative_path
+    _case_relative_path="$(sed -E 's|.*/(sqa/checker/.*)|\1|' <<< "$_testcase_dir")"
+    utils::verbose -c "${BGREEN}" -p "* " "case_relative_path=$_case_relative_path\n"
+
+    _result_ref="$_depot_branch_path/$_case_relative_path"
+    return 0
+}
+
+qa_map_depot_path_by_case_name() {
+    local _path="$1"
+    local _depot="$2"
+    local -n _result_ref="$3"
+
+    # To allow more modules, contact chehuang
+    local _VALID_MODULES=("primewave_post" "test_suites")
+
+    # case name may contain case mode:
+    #   sae_pwso/test_suites/PrimeWave/stars/P90060183-35839, sae_pwso is the case mode
+    #   test_suites/PrimeWave/stars/P90060183-35839
+    # _pattern looks like: "primewave_post/.+|test_suites/.+"
+    local _pattern="$(tr " " "|" <<< "${_VALID_MODULES[@]/%/\/.+}")"
+    if [[ "$_path" =~ ^($_pattern/.+)$ ]] || [[ "$_path" =~ ^[^/]+/($_pattern/.+)$ ]]; then
+        local _matched_path="${BASH_REMATCH[1]}"
+        utils::verbose -c "${BGREEN}" -p "* " "matched_path=$_matched_path\n"
+    else
+        utils::ERROR "Can't find valid module in path\n" >&2
+        return 1
+    fi
+
+    local _depot_branch_path
+    if ! get_depot_branch_path_of_client_root "$_depot" _depot_branch_path; then
+        return 1
+    fi
+
+    # A strong assumption that qa's testcase path has a trait: <client_root>/sqa/checker/...
+    _result_ref="$_depot_branch_path/sqa/checker/$_matched_path"
+    return 0
+}
+
+depot_path=""
 case $mode in
     qa)
-        PROJECT_BLACKLIST=( "nightly" "nightly_weekend" )
-
-        IFS='/' read -r -a arr <<< "$path"
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "path=${arr[*]}" >&2
-
-        if [[ "${arr[6]}" == "main" ]]; then
-            branch="${arr[6]}/dev"
-        else
-            branch="${arr[6]%_*}/${arr[6]##*_}"
-        fi
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "branch=$branch" >&2
-
-        project=${arr[9]}
-        [[ ${PROJECT_BLACKLIST[@]} =~ $project ]] && project=${arr[10]}
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "project=$project" >&2
-
-        if [[ $is_file == true ]]; then
-            dir_name=${path%/*}
-        else
-            dir_name=$path
-        fi
-
-        testcase_path=$(readlink -e "$dir_name/run") || { echo "Error: Invalid path"; exit 1; }
-
-        remain=""
-        IFS='/' read -r -a arr <<< "$testcase_path"
-        for i in "${!arr[@]}"
-        do
-            if [[ ${arr[$i]} == "checker" ]]; then
-                remain=$(printf "/%s" "${arr[@]:$i}")
-                break
+        if [[ "$path" =~ ^/ ]]; then
+            if ! qa_map_depot_path_by_case_path "$path" "$depot" depot_path; then
+                exit 1
             fi
-        done
-        remain=${remain#/}
-        remain=${remain%/*}
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "remain=$remain" >&2
-
-        depot_path="//cktsim/qa/$branch/$project/unit_pw/${remain}"
-        if [[ $is_file == true ]]; then
-            depot_path="$depot_path/$(basename "$path")"
+        else
+            if ! qa_map_depot_path_by_case_name "$path" "$depot" depot_path; then
+                exit 1
+            fi
         fi
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "depot_path=$depot_path" >&2
-
-        echo "$depot_path"
         ;;
 esac
+
+utils::verbose -c "${BGREEN}" -p "* " "depot_path=$depot_path\n"
+[[ -z $depot_path ]] && { utils::ERROR "Map failed\n" >&2; exit 1; }
+echo "$depot_path"

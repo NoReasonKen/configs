@@ -7,3 +7,4 @@ debugger_init $(hostname) 2576
 
 echo "$help"
 exec /depot/TclDevKit-5.4/bin/tcldebugger
+

@@ -1,0 +1,195 @@
+#!/u/chehuang/bin/bash
+
+source "/u/chehuang/bin/color_sh"
+
+utils::verbose() {
+    local msg=""
+    local msg_color="$NC"
+    local prompt=""
+    local prompt_color="$YELLOW"
+
+    local is_force=false
+    local no_params=false
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -c|--msg-color)
+                shift; msg_color="$1"; shift
+                ;;
+            -p|--prompt)
+                shift; prompt="$1"; shift
+                ;;
+            -C|--prompt-color)
+                shift; prompt_color="$1"; shift
+                ;;
+            -f|--force)
+                is_force=true; shift
+                ;;
+            --)
+                no_params=true; shift
+                ;;
+            -*)
+                if [[ "$no_params" == true ]]; then
+                    msg+=" $1"; shift
+                else
+                    exit 1
+                fi
+                ;;
+            *)
+                msg+=" $1"; shift
+                ;;
+        esac
+    done
+
+    msg="${msg:1}"
+
+    # shellcheck disable=SC2154
+    if [[ "$verbose" == "" && "$is_force" == false ]]; then
+        echo "Env 'verbose' should be declared before using verbose()" >&2
+        return 1
+    fi
+
+    [[ "$verbose" == false && "$is_force" == false ]] && return 0
+
+    printf "%b%b" "${prompt_color}" "${prompt}"
+    printf "%b%b" "${msg_color}" "${msg}"
+    printf "%b" "${NC}"
+}
+
+utils::WARNING() {
+    local msg=":"
+    local msg_color="$NC"
+    local prompt="Warning"
+    local prompt_color="$YELLOW"
+
+    local no_params=false
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -c|--msg-color)
+                shift; msg_color="$1"; shift
+                ;;
+            -p|--prompt)
+                shift; prompt="$1"; shift
+                ;;
+            -C|--prompt-color)
+                shift; prompt_color="$1"; shift
+                ;;
+            -f|--force)
+                is_force=true; shift
+                ;;
+            --)
+                no_params=true; shift
+                ;;
+            -*)
+                if [[ "$no_params" == true ]]; then
+                    msg+=" $1"; shift
+                else
+                    exit 1
+                fi
+                ;;
+            *)
+                msg+=" $1"; shift
+                ;;
+        esac
+    done
+
+    utils::verbose -f -c "${msg_color}" -p "${prompt}" -C "${prompt_color}" "${msg}"
+}
+
+utils::ERROR() {
+    local msg=":"
+    local msg_color="$NC"
+    local prompt="Error"
+    local prompt_color="$RED"
+
+    local no_params=false
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -c|--msg-color)
+                shift; msg_color="$1"; shift
+                ;;
+            -p|--prompt)
+                shift; prompt="$1"; shift
+                ;;
+            -C|--prompt-color)
+                shift; prompt_color="$1"; shift
+                ;;
+            -f|--force)
+                is_force=true; shift
+                ;;
+            --)
+                no_params=true; shift
+                ;;
+            -*)
+                if [[ "$no_params" == true ]]; then
+                    msg+=" $1"; shift
+                else
+                    exit 1
+                fi
+                ;;
+            *)
+                msg+=" $1"; shift
+                ;;
+        esac
+    done
+
+    utils::verbose -f -c "${msg_color}" -p "${prompt}" -C "${prompt_color}" "${msg}"
+}
+
+utils::get_relative_path() {
+    local base_path=""
+    local target_path=""
+    local max_depth=-1  # -1 means no limit
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d|--max-depth)
+                shift; max_depth="$1"; shift
+                ;;
+            -*)
+                utils::ERROR "Unknown parameter '$1'\n" >&2
+                return 1
+                ;;
+            *)
+                if [[ -z "$base_path" ]]; then
+                    base_path="$1"; shift
+                elif [[ -z "$target_path" ]]; then
+                    target_path="$1"; shift
+                else
+                    utils::ERROR "Too many arguments\n" >&2
+                    return 1
+                fi
+                ;;
+        esac
+    done
+
+    # Validate inputs
+    if [[ -z "$base_path" ]]; then
+        utils::ERROR "Base path is required\n" >&2
+        return 1
+    fi
+    if [[ -z "$target_path" ]]; then
+        utils::ERROR "Target path is required\n" >&2
+        return 1
+    fi
+
+    # Convert to absolute paths
+    local abs_base_path=$(realpath -m "$base_path")
+    local abs_target_path=$(realpath -m "$target_path")
+
+    # Calculate relative path
+    local rel_path=$(realpath --relative-to="$abs_base_path" "$abs_target_path")
+
+    # Count the number of "../" in the relative path
+    local up_count=0
+    if [[ "$rel_path" =~ ^(\.\./)+.*$ ]]; then
+        up_count=$(grep -o "\.\." <<< "$rel_path" | wc -l)
+    fi
+
+    # If max_depth is set and up_count exceeds it, return the original path
+    if [[ "$max_depth" -ge 0 && "$up_count" -gt "$max_depth" ]]; then
+        echo "$target_path"  # Return the original path
+    else
+        echo "$rel_path"
+    fi
+}
+

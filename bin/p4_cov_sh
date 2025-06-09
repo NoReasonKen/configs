@@ -1,0 +1,134 @@
+#!/u/chehuang/bin/bash
+help="Usage: p4_cov_sh <OPTION>...  <CHANGE>
+Supports short keys for running coverity desktop analysis
+example:
+    # Run under p4 client folder and env QSC_VERSION is set
+    p4_cov_sh 1234567
+    # Run by specifying all parameters
+    p4_cov_sh --client my_client --root ~/my_client_pw --flow \"first_run\" --qsc W \
+        --log-dir /tmp/my_cov_log/ 1234567
+options:
+    -c, --client <NAME>     P4 client name [DEFAULT=<current client>]
+    -r, --root <PATH>       Client root directory [Default=<current client root>]
+    -f, --flow <ID>         Flow ID for analysis [Default=<timestamp>]
+    -q, --qsc <QSC>         QSC version [Default=<env 'QSC_VERSION'>]
+    -l, --log-dir <PATH>    Log directory [Default=<client root>/.coverity_logs]
+    --dry-run               Only show the constructed command instead of running it
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+"
+
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
+
+change=""
+client_root=""
+client=""
+flow_id=""
+log_dir=""
+qsc=""
+dry_run=false
+verbose=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -c|--client)
+            shift; client=$1; shift
+            ;;
+        -r|--root)
+            shift; client_root=$1; shift
+            ;;
+        -f|--flow)
+            shift; flow_id=$1; shift
+            ;;
+        -q|--qsc)
+            shift; qsc=$1; shift
+            ;;
+        -l|--log-dir)
+            shift; log_dir=$1; shift
+            ;;
+        --dry-run)
+            dry_run=true; shift
+            ;;
+        -v|--verbose)
+            verbose=true; shift
+            ;;
+        -h|--help)
+            echo "$help" && exit 0
+            ;;
+        *)
+            if [[ -n "$change" ]]; then
+                utils::ERROR "Can't specify more than 1 change\n" >&2
+                exit 1
+            fi
+            change=$1; shift
+            ;;
+    esac
+done
+
+[[ -z "$change" ]] && { utils::ERROR "Missing change number\n" >&2; exit 1; }
+
+if [[ -z "$client" ]]; then
+    client="$(p4 -z tag -F %clientName% info)"
+    if [[ "$client" == "none" || "$client" == "\*unknown\*" ]]; then
+        utils::ERROR "Missing p4 client\n" >&2
+        exit 1
+    fi
+    utils::verbose -c "${BGREEN}" -p "* " "Auto detect client: $client\n"
+fi
+
+if [[ -z "$client_root" ]]; then
+    client_root="$(p4 -z tag -F %clientRoot% info)"
+    if [[ -z "$client_root" ]]; then
+        utils::ERROR "Error: Can't auto detect client root\n" >&2
+        exit 1
+    fi
+    utils::verbose -c "${BGREEN}" -p "* " "Auto detect client root: $client_root\n"
+fi
+
+if [[ -z "$flow_id" ]]; then
+    flow_id="$(date +"%Y%m%d%H%M%S")"
+    utils::verbose -c "${BGREEN}" -p "* " "Auto generate flow id: $flow_id\n"
+fi
+
+if [[ -z "$qsc" ]]; then
+    if [[ -z "$QSC_VERSION" ]]; then
+        utils::ERROR "Missing both parameter 'qsc' and env 'QSC_VERSION'\n" >&2
+        exit 1
+    fi
+    qsc="$QSC_VERSION"
+    utils::verbose -c "${BGREEN}" -p "* " "Auto use qsc: $qsc\n"
+fi
+
+
+if [[ -z "$log_dir" ]]; then
+    log_dir="$client_root/.coverity_logs"
+    if [[ ! -d "$log_dir" ]]; then
+        if ! mkdir -p "$log_dir"; then
+            utils::ERROR "Error: Can't create log dir $log_dir\n" >&2
+            exit 1
+        fi
+    fi
+    utils::verbose -c "${BGREEN}" -p "* " "Auto use log dir: $log_dir\n"
+fi
+
+utils::verbose --msg-color "${CYAN}" "change=$change; client=$client; root=$client_root; \
+    flow=$flow_id; qsc=$qsc; log-dir=$log_dir\n"
+
+cmd="/remote/swefs6/PE/products/cd/common/script/pci/cov_desktop_analysis.sh"
+cmd+=" -step cda"
+cmd+=" -client $client"
+cmd+=" -clientroot $client_root"
+cmd+=" -change $change"
+cmd+=" -flow_id $flow_id"
+cmd+=" -qsc $qsc"
+cmd+=" -logdir $log_dir"
+
+utils::verbose --msg-color "${BGREEN}" --prompt "* " "Command: $cmd\n"
+utils::verbose -- "--------------------\n"
+
+if [[ "$dry_run" == true ]]; then
+    exit 0
+fi
+
+exit "$(eval "$cmd")"

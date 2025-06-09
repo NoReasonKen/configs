@@ -283,6 +283,9 @@ source "$HOME/.zsh/.zshrc.3rd_party"
 # source synopsys env
 #source $HOME/.zshenv.synopsys
 
+# Add gh completion
+FPATH="$HOME/.config/gh/autocomplete:$FPATH"
+
 # *************************************************************
 # **************** Remove duplicate definition ****************
 # *************************************************************

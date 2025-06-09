@@ -7,8 +7,8 @@ options:
     -h, --help      Display this help and exit
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 filename=""
 verbose=false
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             if [[ -n "$filename" ]]; then
-                echo "Error: Multiple files are not allowed"
+                utils::ERROR "Multiple files are not allowed\n" >&2
                 exit 1
             fi
             filename="$1"; shift
@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "filename=$filename" >&2
+utils::verbose -c "${CYAN}" "filename=$filename\n"
 
 if [[ -L "$filename" && -e "$filename" ]]; then
     exit 0

@@ -52,6 +52,8 @@ utils::install_fzf
 export FZF_COMPLETION_TRIGGER='~~'
 # fzf's command
 export FZF_DEFAULT_COMMAND="fd --hidden --exclude '.git' --exclude 'node_modules'"
+# fzf's opt
+export FZF_DEFAULT_OPTS="--multi --bind ctrl-a:select-all,ctrl-d:deselect-all,ctrl-t:toggle-all"
 # CTRL-T's command
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND --type f"
 export FZF_CTRL_T_OPTS="
@@ -91,6 +93,7 @@ _args=(
     --bind 'ctrl-/:change-preview-window(50%,wrap|0%|70%,nowrap|70%,wrap|50%,nowrap)'  # use 0% instead of 'hidden' to prevent reload
 )
 zstyle ":fzf-tab:*" fzf-flags "${_args[@]}"
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
 __fzf_tab_fzf_preview_func_str() {
     # shellcheck disable=SC2154
     if [[ -f "$realpath" ]]; then
@@ -107,9 +110,9 @@ __fzf_tab_fzf_preview_func_str() {
                 __file_str+="$(printf " %.0s" $(seq 1 $((${#__size_str} - ${#__file_str}))))"
             fi
 
-            printf "#%.0s" $(seq 1 ${#__file_str}); echo ""
             __file_str+=" ###"
             __size_str+=" ###"
+            printf "#%.0s" $(seq 1 ${#__file_str}); echo ""
             echo "$__file_str"
             echo "$__size_str"
             printf "#%.0s" $(seq 1 ${#__file_str}); echo ""

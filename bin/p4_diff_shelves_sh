@@ -21,9 +21,8 @@ usage:
         p4_diff_shelves_sh -r 2 -f //a.txt 123
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "color_sh"
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
 verbose=false
 rev=""
@@ -53,27 +52,38 @@ while [[ $# -gt 0 ]]; do
             echo "$help" && exit 0
             ;;
         *)
-            [[ -n $change ]] && { echo "Error: Can't specify multiple changes" >&2 ; exit 1; }
+            [[ -n $change ]] && { utils::ERROR "Can't specify multiple changes\n" >&2; exit 1; }
             change="$1"
             ;;
     esac
     shift
 done
 
-[[ -z "$change" ]] && { echo "Error: Missing change" >&2 ; exit 1; }
-[[ -n "$rev" && -z "$file" ]] && { echo "Error: --rev can only be used with --file" >&2 ; exit 1; }
+[[ -z "$change" ]] && { utils::ERROR "Missing change\n" >&2; exit 1; }
+if [[ -n "$rev" && -z "$file" ]]; then
+    utils::ERROR "--rev can only be used with --file\n" >&2
+    exit 1
+fi
 
-utils::verbose --msg-color "${CYAN}" "rev=$rev; file=$file; identical=$is_identical; vscode=$is_vscode; verbose=$verbose; change=$change" >&2
+utils::verbose -c "${CYAN}" "rev=$rev; file=$file; identical=$is_identical;" \
+    "vscode=$is_vscode; verbose=$verbose; change=$change\n"
+
 client_name="$(p4 -z tag -F %clientName% info)"
-[[ "$client_name" == "none" || "$client_name" == "\*unknown\*" ]] && { echo "Error: Missing P4 Client" >&2 ; exit 1; }
+if [[ "$client_name" == "none" || "$client_name" == "\*unknown\*" ]]; then
+    utils::ERROR "Missing P4 Client\n" >&2
+    exit 1
+fi
 
 # Check whether change number match
-[[ -z "$(p4 -z tag -F %change% describe -S -s "$change")" ]] && { echo "Error: Invalid change" >&2 ; exit 1; }
+if [[ -z "$(p4 -z tag -F %change% describe -S -s "$change")" ]]; then
+    utils::ERROR "Invalid change\n" >&2
+    exit 1
+fi
 
 _files=()
 for (( _i=0; 1; ++_i )); do
     if ! _depot_file="$(p4 -z tag -F %depotFile${_i}% describe -S -s "$change")"; then
-        echo "Error: When executing 'p4 -z tag -F %depotFile${_i}% describe -S -s $change'" >&2
+        utils::ERROR "When executing 'p4 -z tag -F %depotFile${_i}% describe -S -s $change'\n" >&2
         exit 1
     fi
 
@@ -82,20 +92,20 @@ for (( _i=0; 1; ++_i )); do
     _files+=("$_depot_file")
 done
 
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "Files:" >&2
+utils::verbose -c "${BGREEN}" -p "* " "Files:\n"
 for f in "${_files[@]}"; do
-    utils::verbose "  $f" >&2
+    utils::verbose "  $f\n"
 done
 
 if [[ -n $file ]]; then
     remote_file="$(p4 -z tag -F %depotFile% where "$file")"
     if [[ ! " ${_files[*]} " =~ [[:space:]]${remote_file}[[:space:]] ]]; then
-        echo "Error: Can't find target file in remote" >&2
+        utils::ERROR "Can't find target file in remote\n" >&2
         exit 1
     fi
     _files=("$remote_file")
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "Specify only:" >&2
-    utils::verbose "  $remote_file" >&2
+    utils::verbose -c "${BGREEN}" -p "* " "Specify only:\n"
+    utils::verbose "  $remote_file\n"
 fi
 
 regex_add="^[0-9,]+a[0-9,]+$"
@@ -109,23 +119,29 @@ for f in "${_files[@]}"; do
     fi
     if [[ $is_identical == true || $(wc -l <<< "$diff") -ne 1 ]]; then
         if [[ $is_vscode == true ]]; then
-            # Assume the file is //depot/aaa/bbb.txt@=123, save it to $HOME/workdir/.tmp/depot/aaa/bbb.@=123.txt
+            # Assume the file is //depot/aaa/bbb.txt@=123
+            #   save it to $HOME/workdir/.tmp/depot/aaa/bbb.@=123.txt
             # Change the order of ext and '@=xxx' to make vscode could identify the format of file
-     
+
             tmp_folder="$HOME/workdir/.tmp"
             tmp_file_folder="$tmp_folder/$(dirname "${f#//}")"
             mkdir -p "$tmp_file_folder"
-     
+
             tmp_file_name="$(basename "$f")"
             tmp_file_ext="${tmp_file_name##*.}"
             tmp_file_only_name="${tmp_file_name%.*}"
             tmp_file_path="$tmp_file_folder/$tmp_file_only_name.@=$change.$tmp_file_ext"
             p4 print -q "$f@=$change" > "$tmp_file_path"
-     
-            have_str="$(p4 have "$f")" # e.g. //depot/aaa/bbb.txt#5 - /<local workspace path>/aaa/bbb.txt
-            
+
+            # e.g. //depot/aaa/bbb.txt#5 - /<local workspace path>/aaa/bbb.txt
+            have_str="$(p4 have "$f")"
+
             # shellcheck disable=SC2029
-            [[ -z "$__X11_SERVER" ]] && { echo "Error: Env '__X11_SERVER' is not set, please set this env to a host with running code-server" >&2 ; exit 1; }
+            if [[ -z "$__X11_SERVER" ]]; then
+                utils::ERROR "Env '__X11_SERVER' is not set, please set this env to a host" \
+                    "with running code-server\n" >&2
+                exit 1
+            fi
             src_cmd="source \\\$HOME/bin/disguise_vscode_src"
             code_cmd="code -d ${have_str##* - } $tmp_file_path"
             ssh_x11_server_sh "\$HOME/bin/zsh -c \"$src_cmd && $code_cmd\""

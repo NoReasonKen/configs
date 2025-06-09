@@ -1,175 +1,360 @@
 #!/u/chehuang/bin/bash
 
-help="Usage: get_pw_path_sh [OPTION]...
-Add pw and cc binary folder path without duplicate
+help="Usage: get_pw_path_sh [<OPTION>...]
+Show pw and cc binary folder path
 options:
-    -l, --local         Use local build pw & cc, pw repo folder should be provide
-    -d, --debug         Use local debug build, meaningful only if --local specified
-    -v, --verbose		Show verbose messages in console
-    -h, --help			Display this help and exit
+    -m, --mode <MODE>       Specify mode, can be {local, pci, pci_v, nightly}
+    -f, --file <FILE>       Inject path to FILE where 'custom_compiler' called
+    -v, --verbose           Show verbose messages in console
+    -h, --help              Display this help and exit
+
+    ------local------
+    -r, --root <PATH>       Specify pw repo folder
+    -d, --debug             Is using debug build
+    -----------------
+    ------pci------
+    -b, --branch <NAME>     Specify branch name (e.g. v2023.12_rel)
+    -c, --change <NUM>      Specify change number
+    -----------------
+    ------pci_v------
+    -b, --branch <NAME>     Specify branch name (e.g. v2023.12_rel)
+    -c, --change <NUM>      Specify change number
+    -----------------
+    -----nightly-----
+    -b, --branch <NAME>     Specify branch name (e.g. v2023.12_rel)
+                            Use latest_good_pwde if no date or change specified
+    -p, --project <NAME>    Specify project name (e.g. primewave_optimize)
+                            Default='primewave_optimize'
+    -d, --date <DATE>       Specify (e.g. 20240101)
+    -c, --change <NUM>      Specify change number
+    -----------------
 "
 
-# shellcheck source-path=SCRIPTDIR
-source "utils_sh"
+source "/u/chehuang/bin/utils_src"
+PATH=/u/chehuang/bin:$PATH
 
-params=""
+mode=""
 verbose=false
-use_local=""
+root=""
 debug_build=false
+branch=""
+project=""
+change=""
+date=""
+filename=""
+
+sub_args=()
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -l|--local)
-            shift
-            use_local=$1
-            shift
+        -m|--mode)
+            shift; mode=$1; shift
             ;;
-        -d|--debug)
-            debug_build=true
-            shift
+        -f|--file)
+            shift; filename=$1; shift
             ;;
         -v|--verbose)
-            verbose=true
-            shift
+            verbose=true; shift
             ;;
         -h|--help)
-            echo "$help"
-            exit 0
+            echo "$help" && exit 0
             ;;
         *)
-            params+="$1 "
-            shift
+            sub_args+=("$1"); shift
             ;;
     esac
 done
 
-utils::verbose --msg-color "${CYAN}" "local=$use_local; debug=$debug_build; params=$params" >&2
+case "$mode" in
+    local)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -r|--root)
+                    i=$((i+1)); root="${sub_args[$i]}"
+                    ;;
+                -d|--debug)
+                    debug_build=true
+                    ;;
+                -m|--mode|-f|--file|-v|--verbose)
+                    ;;
+                *)
+                    utils::ERROR "Unknown parameter '${sub_args[$i]}' in mode $mode\n" >&2
+                    exit 1
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        utils::verbose -c "${CYAN}" "mode=$mode; file=$filename; root=$root; debug=$debug_build\n"
+        ;;
+    pci)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -b|--branch)
+                    i=$((i+1)); branch="${sub_args[$i]}"
+                    ;;
+                -c|--change)
+                    i=$((i+1)); change="${sub_args[$i]}"
+                    ;;
+                -m|--mode|-f|--file|-v|--verbose)
+                    ;;
+                *)
+                    utils::ERROR "Unknown parameter '${sub_args[$i]}' in mode $mode\n" >&2
+                    exit 1
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        utils::verbose -c "${CYAN}" "mode=$mode; file=$filename; branch=$branch; change=$change\n"
+        ;;
+    pci_v)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -b|--branch)
+                    i=$((i+1)); branch="${sub_args[$i]}"
+                    ;;
+                -c|--change)
+                    i=$((i+1)); change="${sub_args[$i]}"
+                    ;;
+                -m|--mode|-f|--file|-v|--verbose)
+                    ;;
+                *)
+                    utils::ERROR "Unknown parameter '${sub_args[$i]}' in mode $mode\n" >&2
+                    exit 1
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        utils::verbose -c "${CYAN}" "mode=$mode; file=$filename; branch=$branch; change=$change\n"
+        ;;
+    nightly)
+        i=0
+        while [[ "$i" -lt "${#sub_args[@]}" ]]; do
+            case "${sub_args[$i]}" in
+                -b|--branch)
+                    i=$((i+1)); branch="${sub_args[$i]}"
+                    ;;
+                -p|--project)
+                    i=$((i+1)); project="${sub_args[$i]}"
+                    ;;
+                -d|--date)
+                    i=$((i+1)); date="${sub_args[$i]}"
+                    ;;
+                -c|--change)
+                    i=$((i+1)); change="${sub_args[$i]}"
+                    ;;
+                -m|--mode|-f|--file|-v|--verbose)
+                    ;;
+                *)
+                    utils::ERROR "Unknown parameter '${sub_args[$i]}' in mode $mode\n" >&2
+                    exit 1
+                    ;;
+            esac
+            i=$((i+1))
+        done
+        [[ -z "$project" ]] && project="primewave_optimize"
+        utils::verbose -c "${CYAN}" "mode=$mode; file=$filename; branch=$branch;" \
+            "project=$project; date=$date; change=$change\n"
+        ;;
+    *)
+        utils::ERROR "Invalid mode\n" >&2
+        exit 1
+esac
 
-if [[ -n "$use_local" ]]; then
-    bin_folder="${use_local}/object_root/bin-linux64/primewave_package"
-    [[ "$debug_build" = "true" ]] && bin_folder="${bin_folder}-g"
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "bin folder='${bin_folder}'" >&2
-
-    output="${bin_folder}/bin:${bin_folder}/cc_image/bin"
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "cc & pw path='${output}'" >&2
-else
-    output=$(csh -c "source ~qwang/runPW.csh $params" 2> /dev/null)
-    utils::verbose --msg-color "${BGREEN}" --prompt "* " "Output of ~qwang/runPW.csh:\n${output}" >&2
-
-    if ! echo "$output" | grep -q "PW Work Environment is Ready"; then # for not found case
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "Error occur:\n${output}" >&2
-        output=""
-    elif echo "$output" | grep "CAUTION: You are requiring CC Package!"; then # for case 1, 3
-        output=${output##*#### PW:} # remove longest regex substring '*#### PW:' from the beginning
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove prefix='${output}'" >&2
-
-        output=${output%/cdesigner*} # remove shortest regex substring '/cdesigner*' from the end
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove postfix='${output}'" >&2
-
-        output=$(echo "$output" | sed "s/\/primewave #### CC//g") # remove '/primewave #### CC' between two paths
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove impurity='${output}'" >&2
-    elif echo "$output" | grep "CC (Matched):"; then # for case 2
-        output=${output##*PrimeWave: } # remove longest regex substring '*PrimeWave: ' from the beginning
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove prefix='${output}'" >&2
-
-        output=${output%/cdesigner*} # remove shortest regex substring '/cdesigner*' from the end
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove postfix='${output}'" >&2
-
-        output=$(echo "$output" | xargs)
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "xargs='${output}'" >&2
-        output=$(echo "$output" | sed "s/\/primewave CC (Matched): /:/g") # replace '/primewave CC(Matched): ' to ':' between two paths
-        utils::verbose --msg-color "${BGREEN}" --prompt "* " "After remove impurity='${output}'" >&2
-    else
-        utils::verbose -e --msg-color "${BGREEN}" --prompt "* " "Un-parsable output from ~qwang/runPW.csh:\n${output}" >&2
-        output=""
+if [[ -n "$filename" ]]; then
+    [[ -f "$filename" ]] || { utils::ERROR "FILE does not exist\n" >&2; exit 1; }
+    is_csh_script=false
+    if [[ "${filename##*.}" =~ k?csh$ ]] || grep -qE "#\!.+csh" "$filename"; then
+        is_csh_script=true
     fi
+    utils::verbose -c "${BGREEN}" -p "* " "is_csh_script=$is_csh_script\n"
 fi
 
-# Simple test to prevent unexpected output pollute PATH
-if echo "$output" | grep " "; then
-    utils::verbose -e --msg-color "${BGREEN}" --prompt "* " "Error: Suspicious output found:\n${output}" >&2
-    output=""
-fi
+case "$mode" in
+    local)
+        [[ -z "$root" ]] &&  { utils::ERROR "--root is needed when MODE=local\n" >&2; exit 1; }
 
-path=$PATH
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "Current path='${path}'" >&2
+        bin_folder="${root}/object_root/bin-linux64/bin"
+        if [[ "$debug_build" == true ]]; then
+            bin_folder+="-g"
+        else
+            bin_folder+="-d"
+        fi
 
-if [[ -z "$output" ]]; then # Early exit if any problem happened
-    echo "$path"
-    echo "Error: Empty parsing result" >&2
-    exit 1
+        pw_bin="${bin_folder}"
+        cc_bin="$pw_bin"
+        ;;
+    pci)
+        if [[ -z "$productdir" ]]; then
+            productdir="/remote/swefs6/PE/products/cd"
+            utils::WARNING "env 'productdir' is not set, use default $productdir" >&2
+        fi
+        [[ -z "$branch" ]] && { utils::ERROR "--branch is needed when MODE=pci\n" >&2; exit 1; }
+        [[ -z "$change" ]] && { utils::ERROR "--change is needed when MODE=pci\n" >&2; exit 1; }
+
+        project_folder="${productdir}/main/pci/backups/cd_${branch}/linux64"
+        utils::verbose -c "${BGREEN}" -p "* " "project_folder=$project_folder\n"
+        change_folder="$(fd -d 1 "^success_$change" "$project_folder")"
+
+        line_count="$(wc -l <<< "$change_folder")"
+        [[ "$line_count" -eq 0 ]] && { utils::ERROR "No change folder found\n" >&2; exit 1; }
+        [[ "$line_count" -gt 1 ]] && { utils::ERROR "More than 1 change folders found\n" >&2; exit 1; }
+        change_folder="$(head -n 1 <<< "$change_folder")"
+        utils::verbose -c "${BGREEN}" -p "* " "change_folder=$change_folder\n"
+        #[[ -L "$change_folder" && -e "$change_folder" ]] || { utils::ERROR "Invalid change folder link\n" >&2; exit 1; }
+
+        bin_folder="${change_folder}Testing"
+        pw_bin="${bin_folder}/bin-d/linux64"
+        cc_bin="$pw_bin"
+        ;;
+    pci_v)
+        if [[ -z "$productdir" ]]; then
+            productdir="/remote/swefs6/PE/products/cd"
+            utils::WARNING "env 'productdir' is not set, use default $productdir" >&2
+        fi
+        if [[ -z "$branch" ]]; then
+            utils::ERROR "--branch is needed when MODE=pci_v\n" >&2
+            exit 1
+        fi
+        if [[ -z "$change" ]]; then
+            utils::ERROR "--change is needed when MODE=pci_v\n" >&2
+            exit 1
+        fi
+
+        bin_folder="${productdir}/main/pci_validator/backups/${branch}/${change}"
+        # shellcheck disable=SC2012
+        bin_folder+="/$('ls' "$bin_folder" 2> /dev/null | sort -rn | head -n 1)"
+        bin_folder+="/latest/Testing"
+
+        pw_bin="${bin_folder}/bin-d/linux64"
+        cc_bin="$pw_bin"
+        ;;
+    nightly)
+        if [[ -z "$productdir" ]]; then
+            productdir="/remote/swefs6/PE/products/cd"
+            utils::WARNING "env 'productdir' is not set, use default $productdir" >&2
+        fi
+        if [[ -z "$branch" ]]; then
+            utils::ERROR "--branch is needed when MODE=nightly\n" >&2
+            exit 1
+        fi
+        if [[ -z "$project" ]]; then
+            utils::ERROR "--project is needed when MODE=nightly\n" >&2
+            exit 1
+        fi
+
+        project_folder="${productdir}/${branch}/image/nightly/${project}"
+        if [[ -n "$date" || -n "$change" ]]; then
+            folder=""
+            if [[ -n "$date" ]]; then
+                folder="$(fd -d 1 "^D$date" "$project_folder")"
+                if [[ -z "$folder" ]]; then
+                    utils::ERROR "Can't find nightly build for DATE=$date\n" >&2
+                    exit 1
+                fi
+                if [[ "$(wc -l <<< "$folder")" -gt 1 ]]; then
+                    utils::ERROR "More than 1 nightly build for DATE=$date\n" >&2
+                    exit 1
+                fi
+            fi
+            if [[ -n "$change" ]]; then
+                if [[ -n "$folder" ]]; then
+                    folder="$(echo -e "$folder" | rg "$change")"
+                    if [[ -z "$folder" ]]; then
+                        utils::ERROR "Can't find nightly build for DATE=$date," \
+                            "CHANGE=$change\n" >&2
+                        exit 1
+                    fi
+                    if [[ "$(wc -l <<< "$folder")" -gt 1 ]]; then
+                        utils::ERROR "More than 1 nightly build for DATE=$date," \
+                            "CHANGE=$change\n" >&2
+                        exit 1
+                    fi
+                else
+                    folder="$(fd -d 1 "$change$" "$project_folder")"
+                    if [[ -z "$folder" ]]; then
+                        utils::ERROR "Can't find nightly build for CHANGE=$change\n" >&2
+                        exit 1
+                    fi
+                    if [[ "$(wc -l <<< "$folder")" -gt 1 ]]; then
+                        utils::ERROR "More than 1 nightly build for CHANGE=$change\n" >&2
+                        exit 1
+                    fi
+                fi
+            fi
+            [[ -n "$folder" ]] && bin_folder+="${folder}Testing"
+        else
+            bin_folder="${project_folder}/latest_good_pwde"
+        fi
+
+        pw_bin="${bin_folder}/bin"
+        cc_bin="${bin_folder}/.cc_image/bin"
+        ;;
+    *)
+        utils::ERROR "Invalid MODE or missing required parameters\n" >&2
+        exit 1
+esac
+
+if [[ -d "$pw_bin" && -d "$cc_bin" ]]; then
+    utils::verbose -c "${BGREEN}" -p "* " "pw folder='${pw_bin}'\n"
+    utils::verbose -c "${BGREEN}" -p "* " "cc folder='${cc_bin}'\n"
 else
-    output=$(echo "$output" | awk -F':' '{print $2":"$1}')
+    [[ ! -d "$pw_bin" ]] && { utils::ERROR "PW folder ($pw_bin) does not exist\n" >&2; exit 1; }
+    [[ ! -d "$cc_bin" ]] && { utils::ERROR "CC folder ($cc_bin) does not exist\n" >&2; exit 1; }
 fi
 
-pw_bin=$(which primewave |& grep -v "no primewave in")
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "Current primewave path='${pw_bin}'" >&2
-pw_bin=${pw_bin%/primewave}
-
-cc_bin=$(which cdesigner |& grep -v "no cdesigner in")
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "Current cdesigner path='${cc_bin}'" >&2
-cc_bin=${cc_bin%/cdesigner}
-
-if [ -n "$pw_bin" ]; then
-    path="${path//${pw_bin}:/}"
-    path="${path//:${pw_bin}/}"
+if [[ ! -f "$pw_bin/primewave" ]]; then
+    utils::ERROR "PW executable ($pw_bin/primewave) does not exist\n" >&2
+    exit 1
+fi
+if [[ ! -f "$cc_bin/cdesigner" && ! -f "$cc_bin/custom_compiler" ]]; then
+    utils::ERROR "CC executable ($pw_bin/{cdesigner, custom_compiler}) does not exist\n" >&2
+    exit 1
 fi
 
-if [ -n "$cc_bin" ]; then
-    path="${path//${cc_bin}:/}"
-    path="${path//:${cc_bin}/}"
+if [[ "$mode" == "nightly" ]]; then
+    str="${pw_bin}:${cc_bin}:\$PATH"
+else
+    str="${cc_bin}:\$PATH"
+fi
+[[ -z $filename ]] && { echo "$str"; exit 0; }
+
+# For pw case, insert PATH definition right before 'custom_compiler'
+# For qa case, insert PATH definition right before 'source $SQA_ROOT/test_common/bin/run_common'
+# For ude3 case, insert PATH definition right before 'ude3 '
+valid_keyword=("custom_compiler" "source \\\$SQA_ROOT/.*/run_common" "ude3 .+")
+lines=()
+for keyword in "${valid_keyword[@]}"; do
+    lines+=("$(rg -n --color=never --stop-on-nonmatch "^[# ]*$keyword" "$filename" | \
+        head -n 1 | cut -d ':' -f 1)")
+done
+line_idx="-1"
+regex="^[0-9]+$"
+for ((i=0; i < ${#valid_keyword[@]}; i++)); do
+    if [[ "${lines[$i]}" =~ $regex ]]; then
+        utils::verbose -c "${BGREEN}" -p "* " "Find ${valid_keyword[$i]} in line ${lines[$i]}\n"
+        [[ "$line_idx" -eq "-1" || ${lines[$i]} -le $line_idx ]] && line_idx=$i
+        break
+    else
+        utils::verbose -c "${BGREEN}" -p "* " "Can't find ${valid_keyword[$i]} in $filename\n"
+    fi
+done
+
+if [[ "$is_csh_script" == true ]]; then
+    str="setenv PATH $str"
+else
+    str="PATH=$str"
 fi
 
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "Clean path='${path}'" >&2
-utils::verbose --msg-color "${BGREEN}" --prompt "* " "Final path:" >&2
+if [[ "$line_idx" -eq "-1" ]]; then
+    line="$"
+    utils::WARNING "Can't find any valid executable key words" >&2
+else
+    line="${lines[$line_idx]}"
+fi
 
-utils::verbose "  ${output}:${path}" >&2
-utils::verbose "" >&2
-echo "${output}:${path}"
-
-# Output case 1:
-# SQA_ROOT:/remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/clientstore/cktsim_u2023.03_sp2_rel/unit_pw
-# Using module: cdesigner-tools/2023.03-dev-004
-# #### CAUTION: You are requiring CC Package!                                ############################################
-# #### PW:/slowfs/sandwork/chehuang/pw_u2023.03_sp2_rel/object_root/bin-linux64/primewave_package/bin/primewave
-# #### PWSO Version used in PW:9223143
-# Looking for matched CC...
-# PWSO Version (9223143) Used in CC: /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
-# Found matched CC:/u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
-# #### PW:/slowfs/sandwork/chehuang/pw_u2023.03_sp2_rel/object_root/bin-linux64/primewave_package/bin/primewave
-# #### CC:/u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
-# ####PW Work Environment is Ready#######
-# ###########################################
-
-# Output case 2:
-# SQA_ROOT:/remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/clientstore/cktsim_u2023.03_sp2_rel/unit_pw
-# PrimeWave: /remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/image/nightly/primewave_optimize/D20230926_8454792/Installed/primewave/primewave/U-2023.03-SP2-T-20230926/bin/primewave
-# CC (Matched): /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
-# ###########################################
-# ####PW Work Environment is Ready#######
-# ###########################################
-
-# Output case 3:
-# SQA_ROOT:/remote/swefs1/PE/products/cktsim/v2023.12_rel/clientstore/cktsim_v2023.12_rel/unit_pw
-# Using module: cdesigner-tools/2023.03-dev-004
-# #### CAUTION: You are requiring CC Package!                                ############################################
-# #### PW:/remote/swefs1/PE/products/cktsim/v2023.12_rel/image/pci_validator/pre_commit_8531095/primewave/Testing/bin/primewave
-# #### CC:/slowfs/swe107/image/CUSTOMCOMPILER/V-2023.12/D20231106_9381009/Testing/bin/cdesigner
-# ###########################################
-# ####PW Work Environment is Ready#######
-# ###########################################
-
-# Output case not found:
-# SQA_ROOT:/remote/swefs1/PE/products/cktsim/u2023.03_sp2_rel/clientstore/cktsim_u2023.03_sp2_rel/unit_pw
-# Using module: cdesigner-tools/2023.03-dev-004
-# NOTICE: License variable for Matlab is not defined for general use.
-# You will need to manually set LM_LICENSE_FILE.
-# NOTICE: Global Mentor Graphics license server not defined for this site.
-# You will need to manually set LM_LICENSE_FILE.
-# #### CAUTION: You are requiring CC Package!                                ############################################
-# #### PW:/slowfs/sandwork/chehuang/pw_main/object_root/bin-linux64/primewave_package/bin/primewave
-# #### PWSO Version used in PW:9225403
-# Looking for matched CC...
-# PWSO Version (9223143) Used in CC: /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230926_9236506/Testing/bin/cdesigner
-# PWSO Version (9223143) Used in CC: /u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2/D20230925_9231754/Testing/bin/cdesigner
-# Error:Cannot find matched CC under the pool:/u/cdmgr/image/CUSTOMCOMPILER/U-2023.03-SP2!
+sed -i "${line}i${str}" "$filename"
+utils::verbose -f -c "${BGREEN}" -p "* " "Add ${NC}'${str}' " >&2
+utils::verbose -f -c "${BGREEN}" "to ${NC}${filename}:${line}\n" >&2
 
